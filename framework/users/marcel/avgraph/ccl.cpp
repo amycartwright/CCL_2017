@@ -96,6 +96,10 @@ bool MotionBankProvider::load(const char * filename)
 	
 	try
 	{
+		joints.clear();
+		
+		//
+		
 		FileStream stream;
 		stream.Open(filename, OpenMode_Read);
 		StreamReader reader(&stream, false);
@@ -162,140 +166,148 @@ bool MotionBankProvider::save(const char * filename) const
 bool MotionBankProvider::import(const char * filename)
 {
 #if 1
-	FileStream file;
-	file.Open(filename, (OpenMode)(OpenMode_Read | OpenMode_Text));
-	
-	StreamReader reader(&file, false);
-	uint8_t * bytes = reader.ReadAllBytes();
-	char * text = (char*)bytes;
-	char * BLHip = strstr(text, "BLHip");
-	BLHip -= 16;
-	json j = json::parse(text);
-	delete[] bytes;
-	
-	auto channelsItr = j.find("channels");
-	
-	if (channelsItr != j.end())
+	try
 	{
-		std::cout << "found channels!" << std::endl;
+		FileStream file;
+		file.Open(filename, (OpenMode)(OpenMode_Read | OpenMode_Text));
 		
-		auto & channels = channelsItr.value();
+		StreamReader reader(&file, false);
+		uint8_t * bytes = reader.ReadAllBytes();
+		char * text = (char*)bytes;
+		char * BLHip = strstr(text, "BLHip");
+		BLHip -= 16;
+		json j = json::parse(text);
+		delete[] bytes;
 		
-		for (auto channel : channels)
+		auto channelsItr = j.find("channels");
+		
+		if (channelsItr != j.end())
 		{
-			auto title = channel["title"].get<std::string>();
+			std::cout << "found channels!" << std::endl;
 			
-			std::cout << "channel: " << title << std::endl;
+			auto & channels = channelsItr.value();
 			
-			std::cout << channel.type_name() << std::endl;
-			
-			auto streamsItr = channel.find("streams");
-			
-			if (streamsItr != channel.end())
+			for (auto channel : channels)
 			{
-				auto & streams = streamsItr.value();
+				auto title = channel["title"].get<std::string>();
 				
-				std::cout << "found streams!" << std::endl;
+				std::cout << "channel: " << title << std::endl;
 				
-				for (auto stream : streams)
+				std::cout << channel.type_name() << std::endl;
+				
+				auto streamsItr = channel.find("streams");
+				
+				if (streamsItr != channel.end())
 				{
-					//std::cout << "Stream.." << std::endl;
+					auto & streams = streamsItr.value();
 					
-					auto title = stringValue(stream, "title", "");
-					auto group = stringValue(stream, "group", "");
-					auto frameCount = intValue(stream, "frameCount", 0);
-					auto fps = intValue(stream, "fps", 0);
+					std::cout << "found streams!" << std::endl;
 					
-					std::cout << "stream: " << title << ", group: " << group << ", frameCount: " << frameCount << ", fps: " << fps << std::endl;
-					
-					if (title.empty())
+					for (auto stream : streams)
 					{
-						logWarning("title not set. skipping!");
-						continue;
-					}
-					
-					if (group.empty())
-					{
-						logWarning("group not set. skipping!");
-						continue;
-					}
-					
-					if (frameCount <= 0)
-					{
-						logWarning("frameCount is zero. skipping!");
-						continue;
-					}
-					
-					if (fps <= 0)
-					{
-						logWarning("fps is zero. skipping!");
-						continue;
-					}
-					
-					if (title != "X" && title != "Y" && title != "Z")
-					{
-						logWarning("joint channel unknown. skipping!");
-						continue;
-					}
-					
-					MotionBankJoint & joint = joints[group];
-					
-					MotionBankChannel * jointChannel = nullptr;
-					
-					if (title == "X")
-						jointChannel = &joint.px;
-					if (title == "Y")
-						jointChannel = &joint.py;
-					if (title == "Z")
-						jointChannel = &joint.pz;
-					
-					jointChannel->keys.resize(frameCount);
-					
-					auto framesItr = stream.find("frames");
-					
-					if (framesItr != stream.end())
-					{
-						auto & frames = framesItr.value();
+						//std::cout << "Stream.." << std::endl;
 						
-						//std::cout << "found frames!" << std::endl;
+						auto title = stringValue(stream, "title", "");
+						auto group = stringValue(stream, "group", "");
+						auto frameCount = intValue(stream, "frameCount", 0);
+						auto fps = intValue(stream, "fps", 0);
 						
-						int index = 0;
+						std::cout << "stream: " << title << ", group: " << group << ", frameCount: " << frameCount << ", fps: " << fps << std::endl;
 						
-						float lastValue = 0.f;
-						
-						for (auto frame : frames)
+						if (title.empty())
 						{
-							float value;
+							logWarning("title not set. skipping!");
+							continue;
+						}
+						
+						if (group.empty())
+						{
+							logWarning("group not set. skipping!");
+							continue;
+						}
+						
+						if (frameCount <= 0)
+						{
+							logWarning("frameCount is zero. skipping!");
+							continue;
+						}
+						
+						if (fps <= 0)
+						{
+							logWarning("fps is zero. skipping!");
+							continue;
+						}
+						
+						if (title != "X" && title != "Y" && title != "Z")
+						{
+							logWarning("joint channel unknown. skipping!");
+							continue;
+						}
+						
+						MotionBankJoint & joint = joints[group];
+						
+						MotionBankChannel * jointChannel = nullptr;
+						
+						if (title == "X")
+							jointChannel = &joint.px;
+						if (title == "Y")
+							jointChannel = &joint.py;
+						if (title == "Z")
+							jointChannel = &joint.pz;
+						
+						jointChannel->keys.resize(frameCount);
+						
+						auto framesItr = stream.find("frames");
+						
+						if (framesItr != stream.end())
+						{
+							auto & frames = framesItr.value();
 							
-							if (!frame.is_number())
+							//std::cout << "found frames!" << std::endl;
+							
+							int index = 0;
+							
+							float lastValue = 0.f;
+							
+							for (auto frame : frames)
 							{
-								//logDebug("value is not a number. using last value");
+								float value;
 								
-								value = lastValue;
-							}
-							else
-							{
-								value = frame.get<float>();
+								if (!frame.is_number())
+								{
+									//logDebug("value is not a number. using last value");
+									
+									value = lastValue;
+								}
+								else
+								{
+									value = frame.get<float>();
+									
+									lastValue = value;
+								}
 								
-								lastValue = value;
+								//std::cout << index << " : " << value << std::endl;
+								
+								if (index < frameCount)
+								{
+									jointChannel->keys[index].time = index / float(fps);
+									jointChannel->keys[index].value = value;
+								}
+								
+								index++;
 							}
-							
-							//std::cout << index << " : " << value << std::endl;
-							
-							if (index < frameCount)
-							{
-								jointChannel->keys[index].time = index / float(fps);
-								jointChannel->keys[index].value = value;
-							}
-							
-							index++;
 						}
 					}
 				}
+				
+				break; // only go for first channel
 			}
-			
-			break; // only go for first channel
 		}
+	}
+	catch (std::exception & e)
+	{
+		logError(e.what());
+		return false;
 	}
 #endif
 
@@ -375,7 +387,7 @@ bool MotionBankProvider::provide(const float time, MotionFrame & frame)
 		}
 	}
 	
-	return false;
+	return true;
 }
 
 //
@@ -397,6 +409,7 @@ VfxNodeCCL::VfxNodeCCL()
 	, provider()
 	, surface(nullptr)
 	, outputImage(nullptr)
+	, filename()
 	, time(0.f)
 	, motionFrame()
 {
@@ -425,22 +438,29 @@ VfxNodeCCL::~VfxNodeCCL()
 	surface = nullptr;
 }
 
-void VfxNodeCCL::init(const GraphNode & node)
-{
-	const char * filename = "motiondata.json";
-	
-	std::string cachedFilename = std::string(filename) + ".cache";
-	
-	if (!provider.load(cachedFilename.c_str()))
-	{
-		provider.import(filename);
-		
-		provider.save(cachedFilename.c_str());
-	}
-}
-
 void VfxNodeCCL::tick(const float dt)
 {
+	// reload data, if necessary
+	
+	const char * newFilename = getInputString(kInput_Filename, "");
+	
+	if (newFilename != filename)
+	{
+		filename = newFilename;
+		
+		std::string cachedFilename = filename + ".cache";
+		
+		if (!provider.load(cachedFilename.c_str()))
+		{
+			if (provider.import(filename.c_str()))
+			{
+				provider.save(cachedFilename.c_str());
+			}
+		}
+	}
+	
+	// update the animation
+	
 	const float replaySpeed = getInputFloat(kInput_ReplaySpeed, 1.f);
 	
 	time += dt * replaySpeed;
@@ -456,8 +476,8 @@ void VfxNodeCCL::draw() const
 {
 	const bool showJointNames = getInputBool(kInput_ShowJointNames, false);
 	const float vColorScale = getInputFloat(kInput_VColorScale, 1.f);
-	const float blurH = getInputFloat(kInput_BlurH, 1.f);
-	const float blurV = getInputFloat(kInput_BlurV, 1.f);
+	const float blurH = getInputFloat(kInput_BlurH, 0.f);
+	const float blurV = getInputFloat(kInput_BlurV, 0.f);
 	
 	pushSurface(surface);
 	{
@@ -540,5 +560,3 @@ void VfxNodeCCL::draw() const
 	
 	outputImage->texture = surface->getTexture();
 }
-
-

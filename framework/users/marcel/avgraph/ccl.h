@@ -138,13 +138,14 @@ struct VfxNodeCCL : VfxNodeBase
 	
 	//
 	
+	std::string filename;
+	
 	float time;
 	MotionFrame motionFrame;
 	
 	VfxNodeCCL();
 	~VfxNodeCCL();
 	
-	virtual void init(const GraphNode & node) override;
 	virtual void tick(const float dt) override;
 	virtual void draw() const override;
 };
