@@ -1,0 +1,110 @@
+static const char * s_shaderVs = R"SHADER(
+
+include engine/ShaderCommon.txt
+
+// vertex streams
+
+shader_attrib vec4 in_position4;
+shader_attrib vec3 in_normal;
+shader_attrib vec4 in_color;
+shader_attrib vec2 in_texcoord;
+shader_attrib vec4 in_skinningBlendIndices;
+shader_attrib vec4 in_skinningBlendWeights;
+
+#define in_position in_position4.xyz
+
+// OpenGL constants
+
+#if VS_USE_LEGACY_MATRICES
+	#define ModelViewMatrix           gl_ModelViewMatrix
+	#define ModelViewProjectionMatrix gl_ModelViewProjectionMatrix
+	#define ProjectionMatrix          gl_ProjectionMatrix
+#else
+	uniform mat4 ModelViewMatrix;
+	uniform mat4 ModelViewProjectionMatrix;
+	uniform mat4 ProjectionMatrix;
+#endif
+
+// vertex shader constants
+
+uniform vec4 drawColor;
+uniform mat4 skinningMatrices[32];
+
+// functions
+
+vec4 objectToWorld(vec4 v)
+{
+	return ModelViewMatrix * v;
+}
+
+vec4 objectToProjection(vec4 v)
+{
+	return ModelViewProjectionMatrix * v;
+}
+
+vec4 worldToProjection(vec4 v)
+{
+	return ProjectionMatrix * v;
+}
+
+vec4 objectToWorld_Skinned(ivec4 indices, vec4 weights, vec4 v)
+{
+	return
+		skinningMatrices[indices.x] * v * weights.x +
+		skinningMatrices[indices.y] * v * weights.y +
+		skinningMatrices[indices.z] * v * weights.z +
+		skinningMatrices[indices.w] * v * weights.w;
+}
+
+ivec4 unpackSkinningBlendIndices()
+{
+	return ivec4(in_skinningBlendIndices);
+}
+
+vec4 unpackSkinningBlendWeights()
+{
+	return in_skinningBlendWeights;
+}
+
+vec4 unpackPosition()
+{
+	return vec4(in_position, 1.0);
+}
+
+vec4 unpackNormal()
+{
+	return vec4(in_normal, 0.0);
+}
+
+vec4 unpackColor()
+{
+	return in_color;
+}
+
+vec2 unpackTexcoord(int index)
+{
+	if (index == 0) return in_texcoord;
+	return vec2(0.0, 0.0);
+}
+
+bool drawColorTexcoords()
+{
+	return drawColor.x != 0.0;
+}
+
+bool drawColorNormals()
+{
+	return drawColor.y != 0.0;
+}
+
+bool drawColorBlendIndices()
+{
+	return drawColor.z != 0.0f;
+}
+
+bool drawColorBlendWeights()
+{
+	return drawColor.w != 0.0;
+}
+
+)SHADER";
