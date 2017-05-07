@@ -32,6 +32,7 @@
 #include "../libparticle/ui.h"
 
 #include "ccl.h"
+#include "cclKinectNode.h"
 #include "cclOscNode.h"
 
 using namespace tinyxml2;
@@ -564,6 +565,7 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 	}
 	DefineNodeImpl("ccl", VfxNodeCCL)
 	DefineNodeImpl("ccl.osc", VfxNodeCclOsc)
+	DefineNodeImpl("ccl.kinect", VfxNodeCclKinect)
 	DefineNodeImpl("trigger.asFloat", VfxNodeTriggerAsFloat)
 	DefineNodeImpl("time", VfxNodeTime)
 	DefineNodeImpl("sampleAndHold", VfxNodeSampleAndHold)

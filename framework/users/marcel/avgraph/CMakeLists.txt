@@ -115,7 +115,7 @@ if (APPLE)
 	find_library(BZ2_LIBRARY bz2)
 	find_library(SECURITY_LIBRARY Security)
 	
-	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../libfreenect/lib/usb-1.0.a)
+	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../libusb-1.0/lib/osx/usb-1.0.a)
 
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/glew/lib/libGLEW.a)
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libfreeimage.a)
