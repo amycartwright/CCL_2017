@@ -388,8 +388,10 @@ VfxNodeCCL::VfxNodeCCL()
 	addInput(kInput_BlurH, kVfxPlugType_Float);
 	addInput(kInput_BlurV, kVfxPlugType_Float);
 	addInput(kInput_FixedJoint, kVfxPlugType_Int);
+	addInput(kInput_UseOsc, kVfxPlugType_Bool);
 	addInput(kInput_OscTrigger, kVfxPlugType_Trigger);
 	addInput(kInput_OscValues, kVfxPlugType_String);
+	addInput(kInput_OscScale, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, outputImage);
 }
 
@@ -404,9 +406,10 @@ VfxNodeCCL::~VfxNodeCCL()
 
 void VfxNodeCCL::tick(const float dt)
 {
-	// reload data, if necessary
-	
 	const char * newFilename = getInputString(kInput_Filename, "");
+	const bool useOsc = getInputBool(kInput_UseOsc, false);
+	
+	// reload data, if necessary
 	
 	if (newFilename != filename)
 	{
@@ -431,7 +434,14 @@ void VfxNodeCCL::tick(const float dt)
 	
 	motionFrame = MotionFrame();
 	
-	provideMotionData_MotionBank(time, provider, motionFrame);
+	if (useOsc)
+	{
+		motionFrame = oscFrame;
+	}
+	else
+	{
+		provideMotionData_MotionBank(time, provider, motionFrame);
+	}
 	
 	outputImage->texture = surface->getTexture();
 }
@@ -541,11 +551,17 @@ void VfxNodeCCL::draw() const
 	outputImage->texture = surface->getTexture();
 }
 
+void VfxNodeCCL::analyzeFrame(MotionFrame & frame)
+{
+	// todo : calculate metrics related to posture, movement speed, and whatnot
+}
+
 void VfxNodeCCL::handleTrigger(int socketIndex)
 {
 	if (socketIndex == kInput_OscTrigger)
 	{
-		std::string values = getInputString(kInput_OscValues, "");
+		const std::string values = getInputString(kInput_OscValues, "");
+		const float oscScale = getInputFloat(kInput_OscScale, 1.f);
 		
 		std::vector<std::string> splitValues;
 		
@@ -564,5 +580,22 @@ void VfxNodeCCL::handleTrigger(int socketIndex)
 		}
 		
 		logDebug("received %d values!", floatValues.size());
+		
+		//
+		
+		oscFrame = MotionFrame();
+		
+		int index = 0;
+		
+		for (int i = 0; i + 3 <= floatValues.size() && index < MotionFrame::kNumPoints; i += 3, ++index)
+		{
+			MotionPoint & mp = oscFrame.points[index];
+			
+			mp.p[0] = floatValues[i + 0] * oscScale;
+			mp.p[1] = floatValues[i + 1] * oscScale;
+			mp.p[2] = floatValues[i + 2] * oscScale;
+			
+			oscFrame.numPoints++;
+		}
 	}
 }

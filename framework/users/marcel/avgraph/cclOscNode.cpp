@@ -8,8 +8,6 @@
 
 #include <list>
 
-// todo : use port & ip address from socket inputs
-
 struct CclOscMessage
 {
 	static const int kNumFloats = 75;

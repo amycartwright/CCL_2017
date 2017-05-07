@@ -19,6 +19,7 @@ struct VfxNodeOsc : VfxNodeBase
 	enum Output
 	{
 		kOutput_Trigger,
+		kOutput_Values,
 		kOutput_COUNT
 	};
 	
