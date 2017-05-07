@@ -5275,6 +5275,11 @@ GLuint createTextureFromRGBF32(const void * source, int sx, int sy, bool filter,
 	return createTexture(source, sx, sy, filter, clamp, GL_RGB32F, GL_RGB, GL_FLOAT);
 }
 
+GLuint createTextureFromR16(const void * source, int sx, int sy, bool filter, bool clamp)
+{
+	return createTexture(source, sx, sy, filter, clamp, GL_R16, GL_RED, GL_UNSIGNED_SHORT);
+}
+
 void debugDrawText(float x, float y, int size, float alignX, float alignY, const char * format, ...)
 {
 	if (globals.debugDraw.numLines < globals.debugDraw.kMaxLines)

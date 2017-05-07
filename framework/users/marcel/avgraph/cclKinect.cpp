@@ -13,11 +13,6 @@ bool CclKinect::init()
 		return false;
 	}
     
-#if 0
-	freenect_set_fw_address_nui(kinectContext, ofxKinectExtras::getFWData1473(), ofxKinectExtras::getFWSize1473());
-	freenect_set_fw_address_k4w(kinectContext, ofxKinectExtras::getFWDatak4w(), ofxKinectExtras::getFWSizek4w());
-#endif
-    
 	freenect_set_log_level(context, FREENECT_LOG_WARNING);
 	freenect_select_subdevices(context, freenect_device_flags(FREENECT_DEVICE_MOTOR | FREENECT_DEVICE_CAMERA));
 	
@@ -81,21 +76,6 @@ bool CclKinect::init()
 			deviceHasMotorControl = true;
 		}
 		
-		//We have to do this as freenect has 488 pixels for the IR image height.
-		//Instead of having slightly different sizes depending on capture we will crop the last 8 rows of pixels which are empty.
-		int videoHeight = height;
-		if (bIsVideoInfrared)
-			videoHeight = 488;
-		
-		depthData = malloc(width * height);
-		videoData = malloc(width * videoHeight * (bIsVideoInfrared ? 1 : 3));
-		
-		freenect_set_user(device, this);
-		freenect_set_depth_buffer(device, depthData);
-		freenect_set_video_buffer(device, videoData);
-		freenect_set_depth_callback(device, &grabDepthFrame);
-		freenect_set_video_callback(device, &grabVideoFrame);
-		
 		threadInit();
 		//threadMain();
 		//threadShut();
@@ -137,7 +117,10 @@ bool CclKinect::shut()
 
 void CclKinect::threadInit()
 {
-	freenect_set_led(device, currentLed);
+	//freenect_set_flag(device, FREENECT_AUTO_EXPOSURE, FREENECT_ON);
+	//freenect_set_flag(device, FREENECT_AUTO_WHITE_BALANCE, FREENECT_ON);
+	//freenect_set_flag(device, FREENECT_MIRROR_DEPTH, FREENECT_ON);
+	//freenect_set_flag(device, FREENECT_MIRROR_VIDEO, FREENECT_ON);
 	
 	const freenect_frame_mode videoMode = freenect_find_video_mode(
 		FREENECT_RESOLUTION_MEDIUM,
@@ -145,7 +128,10 @@ void CclKinect::threadInit()
 		? FREENECT_VIDEO_IR_8BIT
 		: FREENECT_VIDEO_RGB);
 	
-	freenect_set_video_mode(device, videoMode);
+	if (freenect_set_video_mode(device, videoMode) < 0)
+	{
+		logError("failed to set video mode");
+	}
 	
 	const freenect_frame_mode depthMode = freenect_find_depth_mode(
 		FREENECT_RESOLUTION_MEDIUM,
@@ -153,10 +139,43 @@ void CclKinect::threadInit()
 		? FREENECT_DEPTH_REGISTERED
 		: FREENECT_DEPTH_MM);
 	
-	freenect_set_depth_mode(device, depthMode);
+	if (freenect_set_depth_mode(device, depthMode) < 0)
+	{
+		logError("failed to set depth mode");
+	}
+	
+	//We have to do this as freenect has 488 pixels for the IR image height.
+	//Instead of having slightly different sizes depending on capture we will crop the last 8 rows of pixels which are empty.
+	int videoHeight = height;
+	if (bIsVideoInfrared)
+		videoHeight = 488;
+	
+	const int depthDataSize = width * height * 2;
+	const int videoDataSize = width * videoHeight * (bIsVideoInfrared ? 1 : 3);
+	
+	Assert(depthDataSize == depthMode.bytes);
+	Assert(videoDataSize == videoMode.bytes);
+	
+	depthData = malloc(depthDataSize);
+	videoData = malloc(videoDataSize);
+	
+	freenect_set_user(device, this);
+	freenect_set_depth_buffer(device, depthData);
+	freenect_set_video_buffer(device, videoData);
+	freenect_set_depth_callback(device, &grabDepthFrame);
+	freenect_set_video_callback(device, &grabVideoFrame);
 
-	freenect_start_depth(device);
-	freenect_start_video(device);
+	freenect_set_led(device, currentLed);
+
+	if (freenect_start_depth(device) < 0)
+	{
+		logError("failed to start depth data stream");
+	}
+	
+	if (freenect_start_video(device) < 0)
+	{
+		logError("failed to start video data stream");
+	}
 }
 
 void CclKinect::threadShut()

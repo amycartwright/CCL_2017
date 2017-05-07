@@ -41,13 +41,22 @@ void VfxNodeCclKinect::tick(const float dt)
 		}
 		
 		if (kinect->bIsVideoInfrared)
+		{
 			videoImage.texture = createTextureFromR8(kinect->videoData, kinect->width, kinect->height, true, true);
+			
+			glBindTexture(GL_TEXTURE_2D, videoImage.texture);
+			GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
+			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+		}
 		else
 			videoImage.texture = createTextureFromRGB8(kinect->videoData, kinect->width, kinect->height, true, true);
 	}
 	
 	if (kinect->hasDepth)
 	{
+		// FREENECT_DEPTH_MM_MAX_VALUE
+		// FREENECT_DEPTH_MM_NO_VALUE
+		
 		// create texture from depth data
 		
 		if (depthImage.texture != 0)
@@ -55,6 +64,10 @@ void VfxNodeCclKinect::tick(const float dt)
 			glDeleteTextures(1, &depthImage.texture);
 		}
 		
-		depthImage.texture = createTextureFromR8(kinect->depthData, kinect->width, kinect->height, true, true);
+		depthImage.texture = createTextureFromR16(kinect->depthData, kinect->width, kinect->height, true, true);
+		
+		glBindTexture(GL_TEXTURE_2D, depthImage.texture);
+		GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
+		glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 	}
 }

@@ -12,7 +12,7 @@ struct CclKinect
 	freenect_device * device;
 	
 	bool bIsVideoInfrared = false;
-	bool bUseRegistration = false;
+	bool bUseRegistration = true;
 	
 	void * videoData;
 	void * depthData;
