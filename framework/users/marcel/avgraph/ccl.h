@@ -9,6 +9,8 @@
 
 class Surface;
 
+struct CclKinect;
+
 struct MotionPoint
 {
 	const std::string * name;

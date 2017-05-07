@@ -32,6 +32,8 @@ file(GLOB_RECURSE source_video "../avpaint/video.cpp" "../avpaint/video.h")
 file(GLOB_RECURSE source_mediaplayer_new "../vfxpro/mediaplayer_new/*.*")
 file(GLOB_RECURSE source_ffmpeg "../vfxpro/ffmpeg/*.*")
 
+file(GLOB_RECURSE source_libfreenect "../../../libfreenect/src/*.*")
+
 file(GLOB_RECURSE source_vfxnodes "vfxNodes/*.*")
 
 file(GLOB_RECURSE source_ui "../libparticle/ui.cpp" "../libparticle/ui.h" "../libparticle/textfield.cpp" "../libparticle/textfield.h" "../libparticle/colorwheel.cpp" "../libparticle/colorwheel.h" "../libparticle/particle.cpp" "../libparticle/particle.h")
@@ -40,6 +42,7 @@ list(APPEND source ${source_video})
 list(APPEND source ${source_mediaplayer_new})
 list(APPEND source ${source_ffmpeg})
 list(APPEND source ${source_ui})
+list(APPEND source ${source_libfreenect})
 
 source_group("Source Files" FILES ${source})
 source_group("video" FILES ${source_video})
@@ -47,12 +50,15 @@ source_group("mediaplayer_new" FILES ${source_mediaplayer_new})
 source_group("ffmpeg" FILES ${source_ffmpeg})
 source_group("vfxNodes" FILES ${source_vfxnodes})
 source_group("ui" FILES ${source_ui})
+source_group("freenect" FILES ${source_libfreenect})
 
 add_executable(avgraph ${source})
 
 target_compile_definitions(avgraph PRIVATE NO_SDL_GLEXT HAVE_M_PI _USE_MATH_DEFINES _CRT_SECURE_NO_WARNINGS NOMINMAX)
 
 target_include_directories(avgraph PRIVATE "${PROJECT_SOURCE_DIR}")
+target_include_directories(avgraph PRIVATE "${PROJECT_SOURCE_DIR}/../../../libusb-1.0/include/libusb-01")
+target_include_directories(avgraph PRIVATE "${PROJECT_SOURCE_DIR}/../../../libfreenect/src")
 
 if (APPLE)
 	target_include_directories(avgraph PRIVATE "../vfxpro/macos/include")
@@ -109,6 +115,8 @@ if (APPLE)
 	find_library(BZ2_LIBRARY bz2)
 	find_library(SECURITY_LIBRARY Security)
 	
+	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../../../libfreenect/lib/usb-1.0.a)
+
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/glew/lib/libGLEW.a)
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libfreeimage.a)
 	target_link_libraries(avgraph PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../framework/macos/lib/libfreetype.a)

@@ -12,6 +12,8 @@
 
 #include "../libparticle/ui.h"
 
+#include "cclKinect.h"
+
 extern const int GFX_SX;
 extern const int GFX_SY;
 
@@ -409,6 +411,17 @@ VfxNodeCCL::VfxNodeCCL()
 	addInput(kInput_OscValues, kVfxPlugType_String);
 	addInput(kInput_OscScale, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, outputImage);
+	
+#if 0 // todo : properly integrate Kinect
+	// test kinect
+	
+	CclKinect kinect;
+	
+	if (kinect.init())
+	{
+		kinect.shut();
+	}
+#endif
 }
 
 VfxNodeCCL::~VfxNodeCCL()
