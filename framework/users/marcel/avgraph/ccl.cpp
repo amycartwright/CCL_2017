@@ -8,6 +8,7 @@
 
 #include "Calc.h"
 #include "Parse.h"
+#include "StringEx.h"
 
 #include "../libparticle/ui.h"
 
@@ -19,6 +20,11 @@ extern void splitString(const std::string & str, std::vector<std::string> & resu
 //
 
 using json = nlohmann::json;
+
+//
+
+static int xIndex = 0;
+static int yIndex = 2;
 
 //
 
@@ -246,6 +252,16 @@ bool MotionBankProvider::import(const char * filename)
 							continue;
 						}
 						
+						//
+						
+						if (String::StartsWith(group, "V_"))
+						{
+							logDebug("skipping empty joint. it only contains zeroes! joint: %s", group.c_str());
+							continue;
+						}
+						
+						//
+						
 						MotionBankJoint & joint = joints[group];
 						
 						MotionBankChannel * jointChannel = nullptr;
@@ -443,6 +459,30 @@ void VfxNodeCCL::tick(const float dt)
 		provideMotionData_MotionBank(time, provider, motionFrame);
 	}
 	
+	// transform the points into the desired coordinate frame
+	
+	const float s = .2f;
+	const float d2r = Calc::DegToRad(1.f);
+	
+	const Mat4x4 transform = Mat4x4(true).RotateX(d2r * 90.f).RotateY(d2r * 180.f).Scale(s, s, s);
+	
+	for (int i = 0; i < motionFrame.numPoints; ++i)
+	{
+		MotionPoint & mp = motionFrame.points[i];
+		
+		const Vec3 p = transform * Vec3(mp.p[0], mp.p[1], mp.p[2]);
+		
+		mp.p[0] = p[0];
+		mp.p[1] = p[1];
+		mp.p[2] = p[2];
+	}
+	
+	// run analysis on the frame we just captured
+	
+	analyzeFrame(motionFrame, analysis);
+	
+	//
+	
 	outputImage->texture = surface->getTexture();
 }
 
@@ -464,30 +504,14 @@ void VfxNodeCCL::draw() const
 		const float s = .2f;
 		const float d2r = Calc::DegToRad(1.f);
 		
-		Mat4x4 transform;
-		//transform.MakeScaling(100.f, 100.f, 100.f);
-		transform.MakeScaling(1.f, 1.f, 1.f);
-		//transform = Mat4x4(true).RotateX(Calc::DegToRad(90.f)).Scale(s, s, s);
-		transform = Mat4x4(true).RotateX(d2r * 90.f).RotateY(d2r * 180.f).RotateY(Calc::DegToRad(framework.time * 0.f)).Scale(s, s, s);
-		
 		gxPushMatrix();
 		{
 			gxTranslatef(GFX_SX/2, GFX_SY/2, 1.f);
 			
-			static int i1 = 0;
-			static int i2 = 2;
-			
-			//if (keyboard.wentUp(SDLK_a))
-			//	i1 = (i1 + 1) % 3;
-			//if (keyboard.wentUp(SDLK_s))
-			//	i2 = (i2 + 1) % 3;
-			
 			if (fixedJoint >= 0 && fixedJoint < motionFrame.numPoints)
 			{
 				const MotionPoint & mp = motionFrame.points[fixedJoint];
-				const Vec3 p = transform * Vec3(mp.p[0], mp.p[1], mp.p[2]);
-				
-				gxTranslatef(-p[i1], -p[i2], 0.f);
+				gxTranslatef(-mp.p[xIndex], -mp.p[yIndex], 0.f);
 			}
 			
 			hqBegin(HQ_FILLED_CIRCLES);
@@ -495,11 +519,10 @@ void VfxNodeCCL::draw() const
 				for (int i = 0; i < motionFrame.numPoints; ++i)
 				{
 					const MotionPoint & mp = motionFrame.points[i];
-					const Vec3 p = transform * Vec3(mp.p[0], mp.p[1], mp.p[2]);
 					
 					//setColor(colorWhite);
 					setColorf(mp.v[0] * vColorScale + .5f, mp.v[1] * vColorScale + .5f, mp.v[2] * vColorScale + .5f);
-					hqFillCircle(p[i1], p[i2], 5.f);
+					hqFillCircle(mp.p[xIndex], mp.p[yIndex], 5.f);
 				}
 			}
 			hqEnd();
@@ -514,9 +537,7 @@ void VfxNodeCCL::draw() const
 					
 					if (mp.name)
 					{
-						const Vec3 p = transform * Vec3(mp.p[0], mp.p[1], mp.p[2]);
-						
-						drawText(p[i1], p[i2], 12, 0, 0, "%s", mp.name->c_str());
+						drawText(mp.p[xIndex], mp.p[yIndex], 12, 0, 0, "%s", mp.name->c_str());
 					}
 				}
 				
@@ -530,6 +551,38 @@ void VfxNodeCCL::draw() const
 			}
 		}
 		gxPopMatrix();
+		
+	#if 1
+		gxPushMatrix();
+		{
+			gxTranslatef(GFX_SX/2, GFX_SY*3/5, 1.f);
+			
+			setFont("calibri.ttf");
+			int y = 0;
+			
+			setColor(colorGreen);
+			drawText(0, y, 18, 0.f, 0.f, "size[x]: %f", analysis.size[xIndex]);
+			y += 20;
+			drawText(0, y, 18, 0.f, 0.f, "size[y]: %f", analysis.size[yIndex]);
+			y += 20;
+			y += 20;
+			
+			setColorf(1, 1, 1, analysis.wideness);
+			drawText(0, y, 18, 0.f, 0.f, "wideness: %f", analysis.wideness);
+			y += 20;
+			setColorf(1, 1, 1, analysis.narrowness);
+			drawText(0, y, 18, 0.f, 0.f, "narrowness: %f", analysis.narrowness);
+			y += 20;
+			
+			setColorf(1, 1, 1, analysis.tallness);
+			drawText(0, y, 18, 0.f, 0.f, "tallness: %f", analysis.tallness);
+			y += 20;
+			setColorf(1, 1, 1, analysis.smallness);
+			drawText(0, y, 18, 0.f, 0.f, "smallness: %f", analysis.smallness);
+			y += 20;
+		}
+		gxPopMatrix();
+	#endif
 	}
 	popSurface();
 	
@@ -551,9 +604,62 @@ void VfxNodeCCL::draw() const
 	outputImage->texture = surface->getTexture();
 }
 
-void VfxNodeCCL::analyzeFrame(MotionFrame & frame)
+void VfxNodeCCL::analyzeFrame(MotionFrame & frame, MotionFrameAnalysis & analysis)
 {
+	const float eps = .0001f;
+	
 	// todo : calculate metrics related to posture, movement speed, and whatnot
+	
+	analysis = MotionFrameAnalysis();
+	
+	if (frame.numPoints > 0)
+	{
+		// calculate bounding box
+		
+		float min[3];
+		float max[3];
+		
+		for (int i = 0; i < 3; ++i)
+		{
+			min[i] = frame.points[0].p[i];
+			max[i] = frame.points[0].p[i];
+		}
+		
+		for (int i = 1; i < frame.numPoints; ++i)
+		{
+			for (int j = 0; j < 3; ++j)
+			{
+				min[j] = std::min(min[j], frame.points[i].p[j]);
+				max[j] = std::max(max[j], frame.points[i].p[j]);
+			}
+		}
+		
+		const float kWidenessBegin = 100.f;
+		const float kWidenessEnd = 200.f;
+		const float kNarrownessBegin = 100.f;
+		const float kNarrownessEnd = 50.f;
+		const float kTallnessBegin = 300.f;
+		const float kTallnessEnd = 360.f;
+		const float kSmallnessBegin = 300.f;
+		const float kSmallnessEnd = 200.f;
+		
+		for (int i = 0; i < 3; ++i)
+		{
+			analysis.min[i] = min[i];
+			analysis.max[i] = max[i];
+			
+			analysis.size[i] = max[i] - min[i];
+			analysis.sizeRcp[i] = 1.f / (max[i] - min[i] + eps);
+			
+			analysis.xOverY = analysis.size[xIndex] / (analysis.size[yIndex] + eps);
+			
+			analysis.wideness = std::max(0.f, std::min(1.f, (analysis.size[xIndex] - kWidenessBegin) / (kWidenessEnd - kWidenessBegin)));
+			analysis.narrowness = std::max(0.f, std::min(1.f, (analysis.size[xIndex] - kNarrownessBegin) / (kNarrownessEnd - kNarrownessBegin)));
+			
+			analysis.tallness = std::max(0.f, std::min(1.f, (analysis.size[yIndex] - kTallnessBegin) / (kTallnessEnd - kTallnessBegin)));
+			analysis.smallness = std::max(0.f, std::min(1.f, (analysis.size[yIndex] - kSmallnessBegin) / (kSmallnessEnd - kSmallnessBegin)));
+		}
+	}
 }
 
 void VfxNodeCCL::handleTrigger(int socketIndex)

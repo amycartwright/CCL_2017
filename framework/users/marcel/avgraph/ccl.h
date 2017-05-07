@@ -36,6 +36,32 @@ struct MotionFrame
 	}
 };
 
+struct MotionFrameAnalysis
+{
+	float min[3];
+	float max[3];
+	
+	float size[3];
+	float sizeRcp[3];
+	
+	//
+	
+	float xOverY;
+	
+	//
+	
+	float wideness;
+	float narrowness;
+	float tallness;
+	float smallness;
+	
+	MotionFrameAnalysis()
+	{
+		memset(this, 0, sizeof(*this));
+	}
+};
+
+/*
 struct MotionData
 {
 	static const int kMaxFrames = 1024;
@@ -48,6 +74,9 @@ struct MotionData
 		memset(frames, 0, sizeof(frames));
 	}
 };
+*/
+
+//
 
 struct MotionBankKey
 {
@@ -108,6 +137,8 @@ struct MotionBankProvider
 	bool provide(const float time, MotionFrame & frame);
 };
 
+//
+
 bool provideMotionData_MotionBank(const float time, MotionBankProvider & provider, MotionFrame & frame);
 bool provideMotionData_Kinect(const float time, MotionFrame & frame);
 
@@ -143,12 +174,14 @@ struct VfxNodeCCL : VfxNodeBase
 	
 	MotionFrame oscFrame;
 	
+	Mat4x4 frameTransform;
 	//
 	
 	std::string filename;
 	
 	float time;
 	MotionFrame motionFrame;
+	MotionFrameAnalysis analysis;
 	
 	VfxNodeCCL();
 	~VfxNodeCCL();
@@ -156,7 +189,7 @@ struct VfxNodeCCL : VfxNodeBase
 	virtual void tick(const float dt) override;
 	virtual void draw() const override;
 	
-	void analyzeFrame(MotionFrame & frame);
+	void analyzeFrame(MotionFrame & frame, MotionFrameAnalysis & analysis);
 	
 	virtual void handleTrigger(int socketIndex) override;
 };
