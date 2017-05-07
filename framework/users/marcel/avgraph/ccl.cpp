@@ -474,7 +474,7 @@ void VfxNodeCCL::tick(const float dt)
 		const float s = .2f;
 		const float d2r = Calc::DegToRad(1.f);
 		
-		transform = Mat4x4(true).RotateX(d2r * 90.f).RotateY(d2r * 180.f).Scale(s, s, s);
+		transform = Mat4x4(true).Scale(-1, 1, 1).RotateX(d2r * 90.f).RotateY(d2r * 180.f).Scale(s, s, s);
 	}
 	else
 	{
@@ -483,7 +483,7 @@ void VfxNodeCCL::tick(const float dt)
 		const float s = .2f;
 		const float d2r = Calc::DegToRad(1.f);
 		
-		transform = Mat4x4(true).Scale(-1, 1, 1).RotateX(d2r * 90.f).RotateY(d2r * 180.f).Scale(s, s, s);
+		transform = Mat4x4(true).RotateX(d2r * 90.f).RotateY(d2r * 180.f).Scale(s, s, s);
 	}
 	
 	// transform the points into the desired coordinate frame
