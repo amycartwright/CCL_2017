@@ -122,6 +122,8 @@ struct VfxNodeCCL : VfxNodeBase
 		kInput_BlurH,
 		kInput_BlurV,
 		kInput_FixedJoint,
+		kInput_OscTrigger,
+		kInput_OscValues,
 		kInput_COUNT
 	};
 	
@@ -149,4 +151,6 @@ struct VfxNodeCCL : VfxNodeBase
 	
 	virtual void tick(const float dt) override;
 	virtual void draw() const override;
+	
+	virtual void handleTrigger(int socketIndex) override;
 };

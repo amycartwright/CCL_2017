@@ -7,11 +7,14 @@
 #include "StreamWriter.h"
 
 #include "Calc.h"
+#include "Parse.h"
 
 #include "../libparticle/ui.h"
 
 extern const int GFX_SX;
 extern const int GFX_SY;
+
+extern void splitString(const std::string & str, std::vector<std::string> & result, char c);
 
 //
 
@@ -385,6 +388,8 @@ VfxNodeCCL::VfxNodeCCL()
 	addInput(kInput_BlurH, kVfxPlugType_Float);
 	addInput(kInput_BlurV, kVfxPlugType_Float);
 	addInput(kInput_FixedJoint, kVfxPlugType_Int);
+	addInput(kInput_OscTrigger, kVfxPlugType_Trigger);
+	addInput(kInput_OscValues, kVfxPlugType_String);
 	addOutput(kOutput_Image, kVfxPlugType_Image, outputImage);
 }
 
@@ -534,4 +539,30 @@ void VfxNodeCCL::draw() const
 	popBlend();
 	
 	outputImage->texture = surface->getTexture();
+}
+
+void VfxNodeCCL::handleTrigger(int socketIndex)
+{
+	if (socketIndex == kInput_OscTrigger)
+	{
+		std::string values = getInputString(kInput_OscValues, "");
+		
+		std::vector<std::string> splitValues;
+		
+		splitString(values, splitValues, ',');
+		
+		std::vector<float> floatValues;
+		
+		for (std::string & value : splitValues)
+		{
+			if (value.empty())
+				continue;
+			
+			const float floatValue = Parse::Float(value);
+			
+			floatValues.push_back(floatValue);
+		}
+		
+		logDebug("received %d values!", floatValues.size());
+	}
 }

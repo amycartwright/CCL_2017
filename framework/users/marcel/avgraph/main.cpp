@@ -32,6 +32,7 @@
 #include "../libparticle/ui.h"
 
 #include "ccl.h"
+#include "cclOscNode.h"
 
 using namespace tinyxml2;
 
@@ -562,6 +563,7 @@ static VfxNodeBase * createVfxNode(const GraphNodeId nodeId, const std::string &
 		vfxNode = new VfxNodeColorLiteral();
 	}
 	DefineNodeImpl("ccl", VfxNodeCCL)
+	DefineNodeImpl("ccl.osc", VfxNodeCclOsc)
 	DefineNodeImpl("trigger.asFloat", VfxNodeTriggerAsFloat)
 	DefineNodeImpl("time", VfxNodeTime)
 	DefineNodeImpl("sampleAndHold", VfxNodeSampleAndHold)
