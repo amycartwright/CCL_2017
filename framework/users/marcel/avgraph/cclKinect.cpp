@@ -47,7 +47,13 @@ bool CclKinect::init()
 	
 	bool deviceHasMotorControl = false;
 	
-	if (!serial.empty())
+	if (serial.empty())
+	{
+		logError("no camera found");
+		shut();
+		return false;
+	}
+	else
 	{
 		Assert(device == nullptr);
 		if (freenect_open_device_by_camera_serial(context, &device, serial.c_str()) < 0)
@@ -178,6 +184,11 @@ void CclKinect::threadShut()
 
 bool CclKinect::threadProcess()
 {
+	if (context == nullptr)
+	{
+		return false;
+	}
+	
 	if (freenect_process_events(context) < 0)
 	{
 		return false;
