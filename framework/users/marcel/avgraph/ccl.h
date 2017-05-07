@@ -121,6 +121,7 @@ struct VfxNodeCCL : VfxNodeBase
 		kInput_VColorScale,
 		kInput_BlurH,
 		kInput_BlurV,
+		kInput_FixedJoint,
 		kInput_COUNT
 	};
 	

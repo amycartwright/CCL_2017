@@ -165,7 +165,6 @@ bool MotionBankProvider::save(const char * filename) const
 
 bool MotionBankProvider::import(const char * filename)
 {
-#if 1
 	try
 	{
 		FileStream file;
@@ -309,47 +308,6 @@ bool MotionBankProvider::import(const char * filename)
 		logError(e.what());
 		return false;
 	}
-#endif
-
-	//
-
-#if 0
-	MotionBankJoint & testJoint = joints["test"];
-	
-	float ctx = 0.f;
-	float cty = 0.f;
-	float ctz = 0.f;
-	
-	float cpx = 0.f;
-	float cpy = 0.f;
-	float cpz = 0.f;
-	
-	for (int i = 0; i < 100; ++i)
-	{
-		const float tt = 1.f / 5.f;
-		const float tp = 1.f / 1.f;
-		
-		const float dtx = random(0.01f, 1.f) * tt;
-		const float dty = random(0.01f, 1.f) * tt;
-		const float dtz = random(0.01f, 1.f) * tt;
-		
-		ctx += dtx;
-		cty += dty;
-		ctz += dtz;
-		
-		const float dpx = random(-1.f, +1.f) * tp;
-		const float dpy = random(-1.f, +1.f) * tp;
-		const float dpz = random(-1.f, +1.f) * tp;
-		
-		cpx += dpx;
-		cpy += dpy;
-		cpz += dpz;
-		
-		testJoint.px.keys.push_back(MotionBankKey(ctx, cpx));
-		testJoint.py.keys.push_back(MotionBankKey(cty, cpy));
-		testJoint.pz.keys.push_back(MotionBankKey(ctz, cpz));
-	}
-#endif
 	
 	return true;
 }
@@ -426,6 +384,7 @@ VfxNodeCCL::VfxNodeCCL()
 	addInput(kInput_VColorScale, kVfxPlugType_Float);
 	addInput(kInput_BlurH, kVfxPlugType_Float);
 	addInput(kInput_BlurV, kVfxPlugType_Float);
+	addInput(kInput_FixedJoint, kVfxPlugType_Int);
 	addOutput(kOutput_Image, kVfxPlugType_Image, outputImage);
 }
 
@@ -478,6 +437,7 @@ void VfxNodeCCL::draw() const
 	const float vColorScale = getInputFloat(kInput_VColorScale, 1.f);
 	const float blurH = getInputFloat(kInput_BlurH, 0.f);
 	const float blurV = getInputFloat(kInput_BlurV, 0.f);
+	const int fixedJoint = getInputInt(kInput_FixedJoint, -1);
 	
 	pushSurface(surface);
 	{
@@ -507,12 +467,19 @@ void VfxNodeCCL::draw() const
 			//if (keyboard.wentUp(SDLK_s))
 			//	i2 = (i2 + 1) % 3;
 			
+			if (fixedJoint >= 0 && fixedJoint < motionFrame.numPoints)
+			{
+				const MotionPoint & mp = motionFrame.points[fixedJoint];
+				const Vec3 p = transform * Vec3(mp.p[0], mp.p[1], mp.p[2]);
+				
+				gxTranslatef(-p[i1], -p[i2], 0.f);
+			}
+			
 			hqBegin(HQ_FILLED_CIRCLES);
 			{
 				for (int i = 0; i < motionFrame.numPoints; ++i)
 				{
 					const MotionPoint & mp = motionFrame.points[i];
-					
 					const Vec3 p = transform * Vec3(mp.p[0], mp.p[1], mp.p[2]);
 					
 					//setColor(colorWhite);
@@ -536,6 +503,14 @@ void VfxNodeCCL::draw() const
 						
 						drawText(p[i1], p[i2], 12, 0, 0, "%s", mp.name->c_str());
 					}
+				}
+				
+				if (fixedJoint >= 0 && fixedJoint < motionFrame.numPoints)
+				{
+					const MotionPoint & mp = motionFrame.points[fixedJoint];
+					
+					if (mp.name)
+						drawText(20, 20, 24, 0, 0, "%s", mp.name->c_str());
 				}
 			}
 		}
