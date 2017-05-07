@@ -450,21 +450,30 @@ void VfxNodeCCL::tick(const float dt)
 	
 	motionFrame = MotionFrame();
 	
+	Mat4x4 transform;
+	
 	if (useOsc)
 	{
 		motionFrame = oscFrame;
+		
+		// transform the points into the desired coordinate frame
+		
+		const float s = .2f;
+		const float d2r = Calc::DegToRad(1.f);
+		
+		transform = Mat4x4(true).RotateX(d2r * 90.f).RotateY(d2r * 180.f).Scale(s, s, s);
 	}
 	else
 	{
 		provideMotionData_MotionBank(time, provider, motionFrame);
+		
+		const float s = .2f;
+		const float d2r = Calc::DegToRad(1.f);
+		
+		transform = Mat4x4(true).Scale(-1, 1, 1).RotateX(d2r * 90.f).RotateY(d2r * 180.f).Scale(s, s, s);
 	}
 	
 	// transform the points into the desired coordinate frame
-	
-	const float s = .2f;
-	const float d2r = Calc::DegToRad(1.f);
-	
-	const Mat4x4 transform = Mat4x4(true).RotateX(d2r * 90.f).RotateY(d2r * 180.f).Scale(s, s, s);
 	
 	for (int i = 0; i < motionFrame.numPoints; ++i)
 	{
