@@ -63,7 +63,8 @@ protected:
 
 			CclOscMessage message;
 
-			if (strcmp(m.AddressPattern(), "/k2/joints/xyz") == 0)
+			//if (strcmp(m.AddressPattern(), "/k2/joints/xyz") == 0)
+			if (true)
 			{
 				message.event = m.AddressPattern();
 				message.str = std::string(m.AddressPattern()).substr(1);
