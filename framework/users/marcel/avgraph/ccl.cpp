@@ -391,6 +391,7 @@ VfxNodeCCL::VfxNodeCCL()
 	, filename()
 	, time(0.f)
 	, motionFrame()
+	, dancer()
 {
 	surface = new Surface(GFX_SX, GFX_SY, false);
 	
@@ -412,16 +413,7 @@ VfxNodeCCL::VfxNodeCCL()
 	addInput(kInput_OscScale, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, outputImage);
 	
-#if 0 // todo : properly integrate Kinect
-	// test kinect
-	
-	CclKinect kinect;
-	
-	if (kinect.init())
-	{
-		kinect.shut();
-	}
-#endif
+	dancer.randomize();
 }
 
 VfxNodeCCL::~VfxNodeCCL()
@@ -471,8 +463,8 @@ void VfxNodeCCL::tick(const float dt)
 		
 		// transform the points into the desired coordinate frame
 		
-		const float s = .2f;
-		const float d2r = Calc::DegToRad(1.f);
+		//const float s = .2f;
+		//const float d2r = Calc::DegToRad(1.f);
 		
 		//transform = Mat4x4(true).Scale(-1, 1, 1).RotateX(d2r * 90.f).RotateY(d2r * 180.f).Scale(s, s, s);
 		transform = Mat4x4(true);
@@ -509,6 +501,24 @@ void VfxNodeCCL::tick(const float dt)
 	// run analysis on the frame we just captured
 	
 	analyzeFrame(motionFrame, analysis);
+	
+	//
+	
+	if (keyboard.wentDown(SDLK_c) && motionFrame.numPoints > 0)
+	{
+		float * points = (float*)alloca(sizeof(float) * motionFrame.numPoints);
+		
+		for (int i = 0; i < motionFrame.numPoints; ++i)
+		{
+			points[i * 3 + 0] = motionFrame.points[i].p[0];
+			points[i * 3 + 1] = motionFrame.points[i].p[1];
+			points[i * 3 + 2] = motionFrame.points[i].p[2];
+		}
+		
+		dancer.constructFromPoints(points, motionFrame.numPoints);
+	}
+	
+	dancer.tick(dt);
 	
 	//
 	
@@ -577,6 +587,8 @@ void VfxNodeCCL::draw() const
 			}
 		}
 		gxPopMatrix();
+		
+		dancer.draw();
 		
 	#if 1
 		gxPushMatrix();

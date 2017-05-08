@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "vfxNodes/vfxNodeBase.h"
+#include "cclDancer.h"
 
 class Surface;
 
@@ -177,6 +178,9 @@ struct VfxNodeCCL : VfxNodeBase
 	MotionFrame oscFrame;
 	
 	Mat4x4 frameTransform;
+	
+	Dancer dancer;
+	
 	//
 	
 	std::string filename;
