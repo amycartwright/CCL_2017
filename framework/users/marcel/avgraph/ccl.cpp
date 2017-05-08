@@ -523,9 +523,6 @@ void VfxNodeCCL::draw() const
 		setColor(127, 127, 127);
 		//drawUiRectCheckered(0, 0, GFX_SX, GFX_SY, 32.f);
 		
-		const float s = .2f;
-		const float d2r = Calc::DegToRad(1.f);
-		
 		gxPushMatrix();
 		{
 			gxTranslatef(GFX_SX/2, GFX_SY/2, 1.f);
