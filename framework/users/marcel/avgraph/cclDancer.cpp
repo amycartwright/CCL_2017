@@ -6,6 +6,45 @@ Dancer::Dancer()
 	memset(this, 0, sizeof(*this));
 }
 
+void Dancer::calculateMinMax(double * min, double * max) const
+{
+	min[0] = 0.0;
+	min[1] = 0.0;
+	max[0] = 0.0;
+	max[1] = 0.0;
+	
+	for (int i = 0; i < numJoints; ++i)
+	{
+		const DancerJoint & j = joints[i];
+		
+		if (i == 0)
+		{
+			min[0] = j.x;
+			min[1] = j.y;
+			max[0] = j.x;
+			max[1] = j.y;
+		}
+		else
+		{
+			min[0] = std::min(min[0], j.x);
+			min[1] = std::min(min[1], j.y);
+			max[0] = std::max(max[0], j.x);
+			max[1] = std::max(max[1], j.y);
+		}
+	}
+}
+
+double Dancer::calculateFitness() const
+{
+	const double sy = max[1] - min[1];
+	
+	if (sy == 0.0)
+		return 0.0;
+	else
+		return 1.0 / sy;
+		//return sy;
+}
+
 void Dancer::randomize()
 {
 	memset(this, 0, sizeof(*this));
@@ -40,12 +79,14 @@ void Dancer::randomize()
 
 void Dancer::randomizeSpringFactors()
 {
-	for (int i = 0; i < numJoints; ++i)
+	for (int i = 0; i < numSprings; ++i)
 	{
 		DancerSpring & s = springs[i];
 		
-		s.spasmFrequency = 1.0;
-		s.springFactor = random(100.0, 10000.0);
+		s.spasmFrequency = random(0.05, 0.1) * 2.0 * M_PI;
+		s.spasmPhase = random(0.0, 1.0) * 2.0 * M_PI;
+		s.springFactor = random(0.0, 200.0);
+		//s.springFactor = random(100.0, 10000.0);
 		//s.springFactor = random(100000.0, 100000.0);
 	}
 }
@@ -58,31 +99,15 @@ void Dancer::constructFromPoints(const float * points, const int numPoints)
 	
 	dampeningPerSecond = 0.9;
 	
-	double min[2];
-	double max[2];
-	
 	for (int i = 0; i < numJoints; ++i)
 	{
 		DancerJoint & j = joints[i];
 		
 		j.x = points[i * 3 + 0];
 		j.y = points[i * 3 + 1];
-		
-		if (i == 0)
-		{
-			min[0] = j.x;
-			min[1] = j.y;
-			max[0] = j.x;
-			max[1] = j.y;
-		}
-		else
-		{
-			min[0] = std::min(min[0], j.x);
-			min[1] = std::min(min[1], j.y);
-			max[0] = std::max(max[0], j.x);
-			max[1] = std::max(max[1], j.y);
-		}
 	}
+	
+	calculateMinMax(min, max);
 	
 	const double sx = max[0] - min[0];
 	const double sy = max[1] - min[1];
@@ -186,7 +211,7 @@ void Dancer::tick(const double dt)
 		return;
 	
 	const double eps = 0.00001;
-	const double dtMax = 1.0 / 1000.0;
+	const double dtMax = 1.0 / 100.0;
 	
 	const int numSteps = int(std::ceil(dt / dtMax));
 	const double dtReal = dt / numSteps;
@@ -195,24 +220,54 @@ void Dancer::tick(const double dt)
 	
 	if (mouse.wentDown(BUTTON_LEFT))
 	{
-		const int index = rand() % numSprings;
-		DancerSpring & s = springs[index];
-		DancerJoint & j1 = joints[s.jointIndex1];
-		DancerJoint & j2 = joints[s.jointIndex2];
-		const double dx = j2.x - j1.x;
-		const double dy = j2.y - j1.y;
-		const double ds = std::hypot(dx, dy);
-		const double nx = dx / ds;
-		const double ny = dy / ds;
-		
-		j1.vx += nx * 100.0;
-		j1.vy += ny * 100.0;
-		j2.vx -= nx * 100.0;
-		j2.vy -= ny * 100.0;
+		for (int i = 0; i < numJoints; ++i)
+		{
+			//const int index = rand() % numSprings;
+			const int index = i;
+			
+			DancerSpring & s = springs[index];
+			DancerJoint & j1 = joints[s.jointIndex1];
+			DancerJoint & j2 = joints[s.jointIndex2];
+			const double dx = j2.x - j1.x;
+			const double dy = j2.y - j1.y;
+			const double ds = std::hypot(dx, dy);
+			const double nx = dx / ds;
+			const double ny = dy / ds;
+			
+			const double speed = 200.0 / 2.0;
+			
+			j1.vx += nx * speed;
+			j1.vy += ny * speed;
+			j2.vx -= nx * speed;
+			j2.vy -= ny * speed;
+		}
 	}
 	
 	for (int i = 0; i < numSteps; ++i)
 	{
+		// apply spasms
+		
+		for (int j = 0; j < numSprings; ++j)
+		{
+			DancerSpring & s = springs[j];
+			DancerJoint & j1 = joints[s.jointIndex1];
+			DancerJoint & j2 = joints[s.jointIndex2];
+			const double dx = j2.x - j1.x;
+			const double dy = j2.y - j1.y;
+			const double ds = std::hypot(dx, dy);
+			const double nx = dx / ds;
+			const double ny = dy / ds;
+			
+			s.spasmPhase += s.spasmFrequency * dtReal;
+			
+			const double speed = std::sin(s.spasmPhase) * 5.0 / 2.0;
+			
+			j1.vx += nx * speed;
+			j1.vy += ny * speed;
+			j2.vx -= nx * speed;
+			j2.vy -= ny * speed;
+		}
+		
 		for (int j = 0; j < numJoints; ++j)
 		{
 			DancerJoint & jt = joints[j];
@@ -226,8 +281,8 @@ void Dancer::tick(const double dt)
 			
 			// collision
 			
-			if (jt.y > 150.0)
-				jt.y = 150.0;
+			//if (jt.y > 150.0)
+			//	jt.y = 150.0;
 		}
 		
 		for (int j = 0; j < numSprings; ++j)
@@ -270,14 +325,21 @@ void Dancer::tick(const double dt)
 			jt.vx *= dampeningPerStep;
 			jt.vy *= dampeningPerStep;
 			
-			jt.x += jt.vx * dtReal;
+			//jt.x += jt.vx * dtReal;
 			jt.y += jt.vy * dtReal;
 		}
 	}
+	
+	calculateMinMax(min, max);
+	
+	totalFitnessValue += calculateFitness() * dt;
 }
 
 void Dancer::draw() const
 {
+	setColor(colorBlue);
+	drawRectLine(min[0], min[1], max[0], max[1]);
+	
 	for (int i = 0; i < numSprings; ++i)
 	{
 		const DancerSpring & s = springs[i];

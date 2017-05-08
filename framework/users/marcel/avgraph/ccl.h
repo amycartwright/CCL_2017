@@ -147,6 +147,8 @@ bool provideMotionData_Kinect(const float time, MotionFrame & frame);
 
 struct VfxNodeCCL : VfxNodeBase
 {
+	const static int kNumDancers = 8;
+	
 	enum Imnput
 	{
 		kInput_Filename,
@@ -179,7 +181,9 @@ struct VfxNodeCCL : VfxNodeBase
 	
 	Mat4x4 frameTransform;
 	
-	Dancer dancer;
+	Dancer currentDancer;
+	Dancer dancer[kNumDancers];
+	double timeToNextGeneration;
 	
 	//
 	
@@ -196,6 +200,10 @@ struct VfxNodeCCL : VfxNodeBase
 	virtual void draw() const override;
 	
 	void analyzeFrame(MotionFrame & frame, MotionFrameAnalysis & analysis);
+	
+	void calculateNextGeneration();
+	Dancer breed(const Dancer & o, const Dancer & d1, const Dancer & d2);
+	void mutate(Dancer & d);
 	
 	virtual void handleTrigger(int socketIndex) override;
 };

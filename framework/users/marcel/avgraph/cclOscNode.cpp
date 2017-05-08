@@ -81,7 +81,7 @@ protected:
 			{
 				SDL_LockMutex(oscMessageMtx);
 				{
-					logDebug("enqueue OSC message. event=%s", message.event.c_str());
+					//logDebug("enqueue OSC message. event=%s", message.event.c_str());
 
 					oscMessages.push_back(message);
 				}

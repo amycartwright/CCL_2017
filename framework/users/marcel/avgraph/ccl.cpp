@@ -388,10 +388,12 @@ VfxNodeCCL::VfxNodeCCL()
 	, provider()
 	, surface(nullptr)
 	, outputImage(nullptr)
+	, dancer()
+	, timeToNextGeneration(3.0)
 	, filename()
 	, time(0.f)
 	, motionFrame()
-	, dancer()
+	, analysis()
 {
 	surface = new Surface(GFX_SX, GFX_SY, false);
 	
@@ -413,7 +415,12 @@ VfxNodeCCL::VfxNodeCCL()
 	addInput(kInput_OscScale, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, outputImage);
 	
-	dancer.randomize();
+	currentDancer.randomize();
+	
+	for (int i = 0; i < kNumDancers; ++i)
+	{
+		dancer[i].randomize();
+	}
 }
 
 VfxNodeCCL::~VfxNodeCCL()
@@ -515,10 +522,32 @@ void VfxNodeCCL::tick(const float dt)
 			points[i * 3 + 2] = motionFrame.points[i].p[2];
 		}
 		
-		dancer.constructFromPoints(points, motionFrame.numPoints);
+		currentDancer.constructFromPoints(points, motionFrame.numPoints);
+		
+		for (int i = 0; i < kNumDancers; ++i)
+		{
+			dancer[i].constructFromPoints(points, motionFrame.numPoints);
+		}
 	}
 	
-	dancer.tick(dt);
+	currentDancer.tick(dt);
+	
+	for (int s = 0; s < 10; ++s)
+	{
+		timeToNextGeneration -= dt;
+		
+		if (timeToNextGeneration <= 0.0)
+		{
+			timeToNextGeneration = 5.0;
+			
+			calculateNextGeneration();
+		}
+		
+		for (int i = 0; i < kNumDancers; ++i)
+		{
+			dancer[i].tick(dt);
+		}
+	}
 	
 	//
 	
@@ -539,6 +568,48 @@ void VfxNodeCCL::draw() const
 		
 		setColor(127, 127, 127);
 		//drawUiRectCheckered(0, 0, GFX_SX, GFX_SY, 32.f);
+		
+		gxPushMatrix();
+		{
+			double totalSx = 0.0;
+			
+			for (int i = 0; i < kNumDancers; ++i)
+			{
+				const Dancer & d = dancer[i];
+				
+				const double sx = d.max[0] - d.min[0];
+				totalSx += sx;
+			}
+			
+			const double scale = GFX_SX / totalSx;
+			
+			double x = 0.0;
+			
+			for (int i = 0; i < kNumDancers; ++i)
+			{
+				const Dancer & d = dancer[i];
+				
+				const double sx = d.max[0] - d.min[0];
+				
+				gxPushMatrix();
+				{
+					gxScalef(scale, scale, 1.f);
+					gxTranslatef(x - d.min[0], -d.min[1], 0.f);
+					
+					d.draw();
+				}
+				gxPopMatrix();
+				
+				const double textX = x * scale;
+				const double textY = (d.max[1] - d.min[1]) * scale;
+				
+				drawText(textX, textY +  0, 18, +1, +1, "%f", d.calculateFitness());
+				drawText(textX, textY + 20, 18, +1, +1, "%f", d.totalFitnessValue);
+				
+				x += sx;
+			}
+		}
+		gxPopMatrix();
 		
 		gxPushMatrix();
 		{
@@ -586,7 +657,7 @@ void VfxNodeCCL::draw() const
 				}
 			}
 			
-			dancer.draw();
+			currentDancer.draw();
 		}
 		gxPopMatrix();
 		
@@ -700,6 +771,142 @@ void VfxNodeCCL::analyzeFrame(MotionFrame & frame, MotionFrameAnalysis & analysi
 	}
 }
 
+void VfxNodeCCL::calculateNextGeneration()
+{
+	const int kBreedingPoolSize = 1000;
+	Dancer * breedingPool[kBreedingPoolSize];
+	
+	Dancer * bestDancer = &dancer[0];
+	
+	for (int i = 1; i < kNumDancers; ++i)
+	{
+		Dancer & d = dancer[i];
+		
+		if (d.totalFitnessValue > bestDancer->totalFitnessValue)
+			bestDancer = &d;
+	}
+		
+	double totalFitness = 0.0;
+	
+	for (int i = 0; i < kNumDancers; ++i)
+	{
+		Dancer & d = dancer[i];
+		
+		totalFitness += d.totalFitnessValue;
+	}
+	
+	if (totalFitness == 0)
+	{
+		logDebug("total fitness value is zero. no sense in breeding!");
+		return;
+	}
+	
+	double currentTotal = 0.0;
+	
+	int index1 = 0;
+	
+	for (int i = 0; i < kNumDancers; ++i)
+	{
+		Dancer & d = dancer[i];
+		
+		currentTotal += d.totalFitnessValue;
+		
+		const int index2 = std::min(int(currentTotal / totalFitness * kBreedingPoolSize), kBreedingPoolSize);
+		
+		logDebug("filling %d - %d", index1, index2);
+		
+		for (int index = index1; index < index2; ++index)
+		{
+			breedingPool[index] = &d;
+		}
+		
+		index1 = index2;
+	}
+	
+	Assert(index1 == kBreedingPoolSize);
+	
+	if (breedingPool[0] == breedingPool[kBreedingPoolSize - 1])
+	{
+		logDebug("only one unique element in breeding pool. cannot self-breed so skipping breeding phase!");
+		return;
+	}
+	
+	//
+	
+	logDebug("breeding!");
+	
+	Dancer nextGeneration[kNumDancers];
+	int nextIndex = 0;
+	
+	while (nextIndex < kNumDancers)
+	{
+		const int index1 = rand() % kBreedingPoolSize;
+		const int index2 = rand() % kBreedingPoolSize;
+		
+		const Dancer * d1 = breedingPool[index1];
+		const Dancer * d2 = breedingPool[index2];
+		
+		if (d1 == d2)
+			continue;
+		else
+		{
+			Dancer & n = nextGeneration[nextIndex];
+			
+			//n = breed(currentDancer, *d1, *d2);
+			n = breed(*bestDancer, *d1, *d2);
+			
+			mutate(n);
+			
+			nextIndex++;
+		}
+	}
+	
+	currentDancer = *bestDancer;
+	
+	for (int i = 0; i < kNumDancers; ++i)
+	{
+		dancer[i] = nextGeneration[i];
+	}
+}
+
+Dancer VfxNodeCCL::breed(const Dancer & o, const Dancer & d1, const Dancer & d2)
+{
+	Dancer d = o;
+	
+	d.totalFitnessValue = 0.0;
+	
+#if 1
+	for (int i = 0; i < o.numSprings; ++i)
+	{
+		DancerSpring & s = d.springs[i];
+		const DancerSpring & s1 = d1.springs[i];
+		const DancerSpring & s2 = d2.springs[i];
+		
+		s.spasmFrequency = Calc::Lerp(s1.spasmFrequency, s2.spasmFrequency, random(0.0, 1.0));
+		s.springFactor = Calc::Lerp(s1.springFactor, s2.springFactor, random(0.0, 1.0));
+	}
+#endif
+	
+	return d;
+}
+
+void VfxNodeCCL::mutate(Dancer & d)
+{
+	for (int i = 0; i < d.numSprings; ++i)
+	{
+		DancerSpring & s = d.springs[i];
+		
+		s.spasmFrequency += random(-0.1, +0.1);
+		s.springFactor += random(-20.0, +20.0);
+		
+		s.spasmFrequency = std::max(0.0, s.spasmFrequency);
+		s.springFactor = std::max(0.0, s.springFactor);
+		
+		s.desiredDistance += random(-10.0, +10.0);
+		s.desiredDistance = std::max(0.0, s.desiredDistance);
+	}
+}
+
 void VfxNodeCCL::handleTrigger(int socketIndex)
 {
 	if (socketIndex == kInput_OscTrigger)
@@ -723,7 +930,7 @@ void VfxNodeCCL::handleTrigger(int socketIndex)
 			floatValues.push_back(floatValue);
 		}
 		
-		logDebug("received %d values!", floatValues.size());
+		//logDebug("received %d values!", floatValues.size());
 		
 		//
 		

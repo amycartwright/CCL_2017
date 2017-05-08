@@ -20,6 +20,10 @@ struct DancerSpring
 	double desiredDistance;
 	double springFactor;
 	double spasmFrequency;
+	
+	//
+	
+	double spasmPhase;
 };
 
 struct Dancer
@@ -35,7 +39,16 @@ struct Dancer
 	
 	double dampeningPerSecond;
 	
+	double min[2];
+	double max[2];
+	
+	double totalFitnessValue;
+	
 	Dancer();
+	
+	void calculateMinMax(double * min, double * max) const;
+	
+	double calculateFitness() const;
 	
 	void randomize();
 	void randomizeSpringFactors();
