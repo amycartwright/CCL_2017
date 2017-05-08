@@ -506,7 +506,7 @@ void VfxNodeCCL::tick(const float dt)
 	
 	if (keyboard.wentDown(SDLK_c) && motionFrame.numPoints > 0)
 	{
-		float * points = (float*)alloca(sizeof(float) * motionFrame.numPoints);
+		float * points = (float*)alloca(sizeof(float) * motionFrame.numPoints * 3);
 		
 		for (int i = 0; i < motionFrame.numPoints; ++i)
 		{
@@ -585,10 +585,10 @@ void VfxNodeCCL::draw() const
 						drawText(20, 20, 24, 0, 0, "%s", mp.name->c_str());
 				}
 			}
+			
+			dancer.draw();
 		}
 		gxPopMatrix();
-		
-		dancer.draw();
 		
 	#if 1
 		gxPushMatrix();

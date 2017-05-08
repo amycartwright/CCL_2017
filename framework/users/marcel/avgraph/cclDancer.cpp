@@ -42,35 +42,88 @@ void Dancer::randomizeSpringFactors()
 {
 	for (int i = 0; i < numJoints; ++i)
 	{
-		for (int j = i + 1; j < numJoints; ++j)
-		{
-			DancerSpring & s = springs[numSprings++];
-			
-			s.spasmFrequency = 1.0;
-			//s.springFactor = random(0.0, 10000.0);
-			s.springFactor = random(0.0, 100.0);
-		}
+		DancerSpring & s = springs[i];
+		
+		s.spasmFrequency = 1.0;
+		s.springFactor = random(100.0, 10000.0);
+		//s.springFactor = random(100000.0, 100000.0);
 	}
 }
 
 void Dancer::constructFromPoints(const float * points, const int numPoints)
 {
+	memset(this, 0, sizeof(*this));
+	
 	numJoints = numPoints;
 	
 	dampeningPerSecond = 0.9;
+	
+	double min[2];
+	double max[2];
 	
 	for (int i = 0; i < numJoints; ++i)
 	{
 		DancerJoint & j = joints[i];
 		
 		j.x = points[i * 3 + 0];
-		j.y = points[i * 3 + 0];
+		j.y = points[i * 3 + 1];
+		
+		if (i == 0)
+		{
+			min[0] = j.x;
+			min[1] = j.y;
+			max[0] = j.x;
+			max[1] = j.y;
+		}
+		else
+		{
+			min[0] = std::min(min[0], j.x);
+			min[1] = std::min(min[1], j.y);
+			max[0] = std::max(max[0], j.x);
+			max[1] = std::max(max[1], j.y);
+		}
 	}
+	
+	const double sx = max[0] - min[0];
+	const double sy = max[1] - min[1];
+	const double diagonalSize = std::hypot(sx, sy);
+	const double connectionTreshold = diagonalSize * 0.3;
+	
+	struct Connection
+	{
+		int index1;
+		int index2;
+		
+		double distance;
+		
+		bool operator<(const Connection & other) const
+		{
+			if (index1 != other.index1)
+				return index1 < other.index1;
+			return index2 < other.index2;
+		}
+	};
+	
+	std::set<Connection> connections;
 	
 	for (int i = 0; i < numJoints; ++i)
 	{
-		for (int j = i + 1; j < numJoints; ++j)
+		std::vector<Connection> candidates;
+		
+		for (int j = 0; j < numJoints; ++j)
 		{
+			if (i == j)
+				continue;
+			
+			// already connected ?
+			
+			Connection c;
+			c.index1 = i;
+			c.index2 = j;
+			
+			if (connections.count(c) != 0)
+				continue;
+			
 			DancerJoint & j1 = joints[i];
 			DancerJoint & j2 = joints[j];
 			
@@ -78,15 +131,34 @@ void Dancer::constructFromPoints(const float * points, const int numPoints)
 			const double dy = j2.y - j1.y;
 			const double ds = std::hypot(dx, dy);
 			
-			if (ds < 1.0 || true)
+			c.distance = ds;
+			
+			candidates.push_back(c);
+		}
+		
+		std::sort(candidates.begin(), candidates.end(), [](const Connection & c1, const Connection & c2) { return c1.distance < c2.distance; });
+		
+		DancerJoint & jt = joints[i];
+		
+		for (int i = 0; jt.numConnections < 6 && i < candidates.size(); ++i)
+		{
+			Connection & c = candidates[i];
+			
+			if (c.distance < connectionTreshold || true)
 			{
+				jt.numConnections++;
+				
+				connections.insert(c);
+			
 				DancerSpring & s = springs[numSprings++];
 				
-				s.jointIndex1 = i;
-				s.jointIndex2 = j;
+				s.jointIndex1 = c.index1;
+				s.jointIndex2 = c.index2;
 			}
 		}
 	}
+	
+	randomizeSpringFactors();
 	
 	finalize();
 }
@@ -123,11 +195,20 @@ void Dancer::tick(const double dt)
 	
 	if (mouse.wentDown(BUTTON_LEFT))
 	{
-		const int index = rand() % numJoints;
-		DancerJoint & j = joints[index];
+		const int index = rand() % numSprings;
+		DancerSpring & s = springs[index];
+		DancerJoint & j1 = joints[s.jointIndex1];
+		DancerJoint & j2 = joints[s.jointIndex2];
+		const double dx = j2.x - j1.x;
+		const double dy = j2.y - j1.y;
+		const double ds = std::hypot(dx, dy);
+		const double nx = dx / ds;
+		const double ny = dy / ds;
 		
-		j.vx += random(-1.0, +1.0) * 100.0;
-		j.vy += random(-1.0, +1.0) * 100.0;
+		j1.vx += nx * 100.0;
+		j1.vy += ny * 100.0;
+		j2.vx -= nx * 100.0;
+		j2.vy -= ny * 100.0;
 	}
 	
 	for (int i = 0; i < numSteps; ++i)
@@ -138,6 +219,15 @@ void Dancer::tick(const double dt)
 			
 			jt.ax = 0.0;
 			jt.ay = 0.0;
+			
+			// gravity
+			
+			//jt.ay += 100.0;
+			
+			// collision
+			
+			if (jt.y > 150.0)
+				jt.y = 150.0;
 		}
 		
 		for (int j = 0; j < numSprings; ++j)
@@ -155,11 +245,19 @@ void Dancer::tick(const double dt)
 			const double dd = ds - s.desiredDistance;
 			const double a = dd * s.springFactor;
 			
+		#if 0
+			const double fitting = 1.0 / 2.0 / 100.0;
+			j1.x += dd * nx * fitting;
+			j1.y += dd * ny * fitting;
+			j2.x -= dd * nx * fitting;
+			j2.y -= dd * ny * fitting;
+		#else
 			j1.ax += nx * a;
 			j1.ay += ny * a;
 			
 			j2.ax -= nx * a;
 			j2.ay -= ny * a;
+		#endif
 		}
 		
 		for (int j = 0; j < numJoints; ++j)

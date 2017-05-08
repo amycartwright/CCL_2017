@@ -8,6 +8,8 @@ struct DancerJoint
 	double vy;
 	double ax;
 	double ay;
+	
+	int numConnections;
 };
 
 struct DancerSpring
@@ -22,8 +24,8 @@ struct DancerSpring
 
 struct Dancer
 {
-	static const int kMaxJoints = 16;
-	static const int kMaxSprings = 256;
+	static const int kMaxJoints = 32;
+	static const int kMaxSprings = 1024;
 	
 	DancerJoint joints[kMaxJoints];
 	DancerSpring springs[kMaxSprings];
