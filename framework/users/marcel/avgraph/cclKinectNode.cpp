@@ -7,14 +7,9 @@ VfxNodeCclKinect::VfxNodeCclKinect()
 	, depthImage()
 	, kinect(nullptr)
 {
-	kinect = new CclKinect();
-
-	kinect->init();
-
-	//
-
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
 	addInput(kInput_DeviceId, kVfxPlugType_Int);
+	addInput(kInput_Infrared, kVfxPlugType_Bool);
 	addOutput(kOutput_VideoImage, kVfxPlugType_Image, &videoImage);
 	addOutput(kOutput_DepthImage, kVfxPlugType_Image, &depthImage);
 }
@@ -25,6 +20,16 @@ VfxNodeCclKinect::~VfxNodeCclKinect()
 
 	delete kinect;
 	kinect = nullptr;	
+}
+
+void VfxNodeCclKinect::init(const GraphNode & node)
+{
+	const bool videoIsInfrared = getInputBool(kInput_Infrared, false);
+	
+	kinect = new CclKinect();
+	kinect->bIsVideoInfrared = videoIsInfrared;
+	
+	kinect->init();
 }
 
 void VfxNodeCclKinect::tick(const float dt)

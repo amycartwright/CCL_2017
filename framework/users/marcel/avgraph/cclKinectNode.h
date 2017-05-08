@@ -9,6 +9,7 @@ struct VfxNodeCclKinect : VfxNodeBase
 	enum Input
 	{
 		kInput_DeviceId,
+		kInput_Infrared,
 		kInput_COUNT
 	};
 	
@@ -26,6 +27,8 @@ struct VfxNodeCclKinect : VfxNodeBase
 
 	VfxNodeCclKinect();
 	virtual ~VfxNodeCclKinect() override;
+	
+	virtual void init(const GraphNode & node) override;
 	
 	virtual void tick(const float dt) override;
 };
