@@ -76,7 +76,10 @@ bool CclKinect::init()
 			deviceHasMotorControl = true;
 		}
 		
-		threadInit();
+		mutex = SDL_CreateMutex();
+		thread = SDL_CreateThread(threadMain, "Kinect Thread", this);
+		
+		//threadInit();
 		//threadMain();
 		//threadShut();
 	}
@@ -86,18 +89,35 @@ bool CclKinect::init()
 
 bool CclKinect::shut()
 {
-	threadShut();
-	
-	if (videoData != nullptr)
+	if (thread != nullptr)
 	{
-		free(videoData);
-		videoData = nullptr;
+		SDL_LockMutex(mutex);
+		{
+			stopThread = true;
+		}
+		SDL_UnlockMutex(mutex);
+		
+		SDL_WaitThread(thread, nullptr);
+		
+		SDL_DestroyMutex(mutex);
+		mutex = nullptr;
+		
+		stopThread = false;
 	}
 	
-	if (depthData != nullptr)
+	for (int i = 0; i < 2; ++i)
 	{
-		free(depthData);
-		depthData = nullptr;
+		if (videoData[i] != nullptr)
+		{
+			free(videoData[i]);
+			videoData[i] = nullptr;
+		}
+		
+		if (depthData[i] != nullptr)
+		{
+			free(depthData[i]);
+			depthData[i] = nullptr;
+		}
 	}
 	
 	if (device != nullptr)
@@ -156,13 +176,17 @@ void CclKinect::threadInit()
 	Assert(depthDataSize == depthMode.bytes);
 	Assert(videoDataSize == videoMode.bytes);
 	
-	depthData = malloc(depthDataSize);
-	videoData = malloc(videoDataSize);
+	depthData[0] = malloc(depthDataSize);
+	depthData[1] = malloc(depthDataSize);
+	videoData[0] = malloc(videoDataSize);
+	videoData[1] = malloc(videoDataSize);
 	
 	freenect_set_user(device, this);
-	freenect_set_depth_buffer(device, depthData);
-	freenect_set_video_buffer(device, videoData);
+	
+	freenect_set_depth_buffer(device, depthData[0]);
 	freenect_set_depth_callback(device, &grabDepthFrame);
+	
+	freenect_set_video_buffer(device, videoData[0]);
 	freenect_set_video_callback(device, &grabVideoFrame);
 
 	freenect_set_led(device, currentLed);
@@ -240,93 +264,70 @@ bool CclKinect::threadProcess()
 	return true;
 }
 
-void CclKinect::threadMain()
+int CclKinect::threadMain(void * userData)
 {
-	bool stop = false;
+	CclKinect * self = (CclKinect*)userData;
 	
-	while (!stop && threadProcess())
+	self->threadInit();
+	
+	for (;;)
 	{
-		//
+		bool stop = false;
+		
+		SDL_LockMutex(self->mutex);
+		{
+			stop = self->stopThread;
+		}
+		SDL_UnlockMutex(self->mutex);
+		
+		if (stop)
+		{
+			break;
+		}
+		
+		self->threadProcess();
+	
 	}
+	
+	self->threadShut();
+	
+	return 0;
 }
 
 void CclKinect::grabDepthFrame(freenect_device * dev, void * depth, uint32_t timestamp)
 {
-	logDebug("got depth frame: %u", timestamp);
+	//logDebug("got depth frame: %u", timestamp);
 	
 	CclKinect * self = (CclKinect*)dev->user_data;
 	
-	self->hasDepth = true;
-	
-#if 0
-	framework.process();
-	
-	framework.beginDraw(0, 0, 0, 0);
+	SDL_LockMutex(self->mutex);
 	{
-		GLuint texture = createTextureFromR8(depth, width, height, true, true);
+		self->hasDepth = true;
+		self->depth = depth;
 		
-		const int x1 = 0;
-		const int y1 = 0;
-		const int x2 = width;
-		const int y2 = height;
+		Assert(depth == self->depthData[0]);
 		
-		gxSetTexture(texture);
-		gxBegin(GL_QUADS);
-		{
-			gxTexCoord2f(1.f, 0.f); gxVertex2f(x1, y1);
-			gxTexCoord2f(0.f, 0.f); gxVertex2f(x2, y1);
-			gxTexCoord2f(0.f, 1.f); gxVertex2f(x2, y2);
-			gxTexCoord2f(1.f, 1.f); gxVertex2f(x1, y2);
-		}
-		gxEnd();
-		gxSetTexture(0);
-		
-		glDeleteTextures(1, &texture);
-		texture = 0;
+		std::swap(self->depthData[0], self->depthData[1]);
+		freenect_set_depth_buffer(self->device, self->depthData[0]);
 	}
-	framework.endDraw();
-#endif
+	SDL_UnlockMutex(self->mutex);
 }
 
 void CclKinect::grabVideoFrame(freenect_device * dev, void * video, uint32_t timestamp)
 {
-	logDebug("got video frame: %u", timestamp);
+	//logDebug("got video frame: %u", timestamp);
 	
 	CclKinect * self = (CclKinect*)dev->user_data;
 	
-	self->hasVideo = true;
-	
-#if 0
-	framework.process();
-	
-	framework.beginDraw(0, 0, 0, 0);
+	SDL_LockMutex(self->mutex);
 	{
-		GLuint texture;
+		self->hasVideo = true;
+		self->video = video;
 		
-		if (bIsVideoInfrared)
-			texture = createTextureFromR8(video, width, height, true, true);
-		else
-			texture = createTextureFromRGB8(video, width, height, true, true);
+		Assert(video == self->videoData[0]);
 		
-		const int x1 = 0;
-		const int y1 = 0;
-		const int x2 = width;
-		const int y2 = height;
-		
-		gxSetTexture(texture);
-		gxBegin(GL_QUADS);
-		{
-			gxTexCoord2f(1.f, 0.f); gxVertex2f(x1, y1);
-			gxTexCoord2f(0.f, 0.f); gxVertex2f(x2, y1);
-			gxTexCoord2f(0.f, 1.f); gxVertex2f(x2, y2);
-			gxTexCoord2f(1.f, 1.f); gxVertex2f(x1, y2);
-		}
-		gxEnd();
-		gxSetTexture(0);
-		
-		glDeleteTextures(1, &texture);
-		texture = 0;
+		std::swap(self->videoData[0], self->videoData[1]);
+		freenect_set_video_buffer(self->device, self->videoData[0]);
 	}
-	framework.endDraw();
-#endif
+	SDL_UnlockMutex(self->mutex);
 }

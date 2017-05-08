@@ -29,45 +29,51 @@ VfxNodeCclKinect::~VfxNodeCclKinect()
 
 void VfxNodeCclKinect::tick(const float dt)
 {
-	kinect->threadProcess();
-	
-	if (kinect->hasVideo)
+	SDL_LockMutex(kinect->mutex);
 	{
-		// create texture from video data
-		
-		if (videoImage.texture != 0)
+		if (kinect->hasVideo)
 		{
-			glDeleteTextures(1, &videoImage.texture);
+			kinect->hasVideo = false;
+			
+			// create texture from video data
+			
+			if (videoImage.texture != 0)
+			{
+				glDeleteTextures(1, &videoImage.texture);
+			}
+			
+			if (kinect->bIsVideoInfrared)
+			{
+				videoImage.texture = createTextureFromR8(kinect->video, kinect->width, kinect->height, true, true);
+				
+				glBindTexture(GL_TEXTURE_2D, videoImage.texture);
+				GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
+				glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+			}
+			else
+				videoImage.texture = createTextureFromRGB8(kinect->video, kinect->width, kinect->height, true, true);
 		}
 		
-		if (kinect->bIsVideoInfrared)
+		if (kinect->hasDepth)
 		{
-			videoImage.texture = createTextureFromR8(kinect->videoData, kinect->width, kinect->height, true, true);
+			kinect->hasDepth = false;
 			
-			glBindTexture(GL_TEXTURE_2D, videoImage.texture);
+			// FREENECT_DEPTH_MM_MAX_VALUE
+			// FREENECT_DEPTH_MM_NO_VALUE
+			
+			// create texture from depth data
+			
+			if (depthImage.texture != 0)
+			{
+				glDeleteTextures(1, &depthImage.texture);
+			}
+			
+			depthImage.texture = createTextureFromR16(kinect->depth, kinect->width, kinect->height, true, true);
+			
+			glBindTexture(GL_TEXTURE_2D, depthImage.texture);
 			GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
 			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
 		}
-		else
-			videoImage.texture = createTextureFromRGB8(kinect->videoData, kinect->width, kinect->height, true, true);
 	}
-	
-	if (kinect->hasDepth)
-	{
-		// FREENECT_DEPTH_MM_MAX_VALUE
-		// FREENECT_DEPTH_MM_NO_VALUE
-		
-		// create texture from depth data
-		
-		if (depthImage.texture != 0)
-		{
-			glDeleteTextures(1, &depthImage.texture);
-		}
-		
-		depthImage.texture = createTextureFromR16(kinect->depthData, kinect->width, kinect->height, true, true);
-		
-		glBindTexture(GL_TEXTURE_2D, depthImage.texture);
-		GLint swizzleMask[4] = { GL_RED, GL_RED, GL_RED, GL_ONE };
-		glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
-	}
+	SDL_UnlockMutex(kinect->mutex);
 }
