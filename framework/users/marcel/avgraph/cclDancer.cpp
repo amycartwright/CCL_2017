@@ -295,14 +295,8 @@ void Dancer::tick(const double dt, const int fitnessFunction)
 	
 	for (int i = 0; i < numSteps; ++i)
 	{
-<<<<<<< HEAD
-		// apply spasms
-		
     #if 0
-		for (int j = 0; j < numSprings; ++j)
-=======
 		if (env.useSpasms)
->>>>>>> f74c2dd51d7d7a0082a424343ab627cfc5d896dc
 		{
 			// apply spasms
 			
@@ -338,21 +332,12 @@ void Dancer::tick(const double dt, const int fitnessFunction)
 			
 			// gravity
 			
-<<<<<<< HEAD
-			jt.ay += 100.0;
-			
-			// collision
-			
-			if (jt.y > 250.0)
-				jt.y = 250.0;
-=======
 			jt.ay += env.gravityY;
 			
 			// collision
 			
 			if (jt.y > env.collisionY)
 				jt.y = env.collisionY;
->>>>>>> f74c2dd51d7d7a0082a424343ab627cfc5d896dc
 		}
 		
 		for (int j = 0; j < numSprings; ++j)
