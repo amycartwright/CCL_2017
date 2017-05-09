@@ -413,6 +413,8 @@ VfxNodeCCL::VfxNodeCCL()
 	addInput(kInput_OscTrigger, kVfxPlugType_Trigger);
 	addInput(kInput_OscValues, kVfxPlugType_String);
 	addInput(kInput_OscScale, kVfxPlugType_Float);
+	addInput(kInput_ShowGeneticDancers, kVfxPlugType_Bool);
+	addInput(kInput_VisualDancerBlendPerSecond, kVfxPlugType_Float);
 	addOutput(kOutput_Image, kVfxPlugType_Image, outputImage);
 	
 	currentDancer.randomize();
@@ -435,7 +437,7 @@ VfxNodeCCL::~VfxNodeCCL()
 
 void VfxNodeCCL::tick(const float dt)
 {
-	const double blendToPerSecond = 0.5; // todo : get input
+	const double blendToPerSecond = getInputFloat(kInput_VisualDancerBlendPerSecond, 0.f);
 	const double blendToThisFrame = std::pow(blendToPerSecond, dt);
 	const char * newFilename = getInputString(kInput_Filename, "");
 	const bool useOsc = getInputBool(kInput_UseOsc, false);
@@ -567,6 +569,7 @@ void VfxNodeCCL::draw() const
 	const float blurH = getInputFloat(kInput_BlurH, 0.f);
 	const float blurV = getInputFloat(kInput_BlurV, 0.f);
 	const int fixedJoint = getInputInt(kInput_FixedJoint, -1);
+	const bool showVirtualDancers = getInputBool(kInput_ShowGeneticDancers, false);
 	
 	pushSurface(surface);
 	{
@@ -575,49 +578,52 @@ void VfxNodeCCL::draw() const
 		setColor(127, 127, 127);
 		//drawUiRectCheckered(0, 0, GFX_SX, GFX_SY, 32.f);
 		
-		gxPushMatrix();
+		if (showVirtualDancers)
 		{
-			double totalSx = 0.0;
-			
-			for (int i = 0; i < kNumDancers; ++i)
+			gxPushMatrix();
 			{
-				const Dancer & d = dancer[i];
+				double totalSx = 0.0;
 				
-				const double sx = d.max[0] - d.min[0];
-				totalSx += sx;
-			}
-			
-			totalSx += eps;
-			
-			const double scale = GFX_SX / totalSx;
-			
-			double x = 0.0;
-			
-			for (int i = 0; i < kNumDancers; ++i)
-			{
-				const Dancer & d = dancer[i];
-				
-				const double sx = d.max[0] - d.min[0];
-				
-				gxPushMatrix();
+				for (int i = 0; i < kNumDancers; ++i)
 				{
-					gxScalef(scale, scale, 1.f);
-					gxTranslatef(x - d.min[0], -d.min[1], 0.f);
+					const Dancer & d = dancer[i];
 					
-					d.draw();
+					const double sx = d.max[0] - d.min[0];
+					totalSx += sx;
 				}
-				gxPopMatrix();
 				
-				const double textX = x * scale;
-				const double textY = (d.max[1] - d.min[1]) * scale;
+				totalSx += eps;
 				
-				drawText(textX, textY +  0, 18, +1, +1, "%f", d.calculateFitness());
-				drawText(textX, textY + 20, 18, +1, +1, "%f", d.totalFitnessValue);
+				const double scale = GFX_SX / totalSx;
 				
-				x += sx;
+				double x = 0.0;
+				
+				for (int i = 0; i < kNumDancers; ++i)
+				{
+					const Dancer & d = dancer[i];
+					
+					const double sx = d.max[0] - d.min[0];
+					
+					gxPushMatrix();
+					{
+						gxScalef(scale, scale, 1.f);
+						gxTranslatef(x - d.min[0], -d.min[1], 0.f);
+						
+						d.draw();
+					}
+					gxPopMatrix();
+					
+					const double textX = x * scale;
+					const double textY = (d.max[1] - d.min[1]) * scale;
+					
+					drawText(textX, textY +  0, 18, +1, +1, "%f", d.calculateFitness());
+					drawText(textX, textY + 20, 18, +1, +1, "%f", d.totalFitnessValue);
+					
+					x += sx;
+				}
 			}
+			gxPopMatrix();
 		}
-		gxPopMatrix();
 		
 		gxPushMatrix();
 		{
