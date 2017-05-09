@@ -32,6 +32,16 @@ static int yIndex = 2;
 
 //
 
+static double Mix(const double a, const double b, const double t)
+{
+	const double t1 = 1.0 - t;
+	const double t2 = t;
+	
+	return a * t1 + b * t2;
+}
+
+//
+
 MotionBankChannel::MotionBankChannel()
 	: keys()
 	, nextReadIndex()
@@ -419,6 +429,7 @@ VfxNodeCCL::VfxNodeCCL()
 	addOutput(kOutput_Image, kVfxPlugType_Image, outputImage);
 	
 	currentDancer.randomize();
+	currentDancerSlow = currentDancer;
 	fittestDancer = currentDancer;
 	
 	for (int i = 0; i < kNumDancers; ++i)
@@ -439,7 +450,7 @@ VfxNodeCCL::~VfxNodeCCL()
 void VfxNodeCCL::tick(const float dt)
 {
 	const double blendToPerSecond = getInputFloat(kInput_VisualDancerBlendPerSecond, 0.f);
-	const double blendToThisFrame = std::pow(blendToPerSecond, dt);
+	const double blendToThisFrame = 1.0 - std::pow(1.0 - blendToPerSecond, dt);
 	const char * newFilename = getInputString(kInput_Filename, "");
 	const bool useOsc = getInputBool(kInput_UseOsc, false);
     const int fitnessFuntion = getInputInt(kInput_FitnessFunction, 0);
@@ -530,6 +541,7 @@ void VfxNodeCCL::tick(const float dt)
 		}
 		
 		currentDancer.constructFromPoints(points, motionFrame.numPoints);
+		currentDancerSlow = currentDancer;
 		fittestDancer = currentDancer;
 		
 		for (int i = 0; i < kNumDancers; ++i)
@@ -541,6 +553,18 @@ void VfxNodeCCL::tick(const float dt)
 	currentDancer.blendTo(fittestDancer, blendToThisFrame);
 	
 	currentDancer.tick(dt, fitnessFuntion);
+	
+	const double slowBlendPerSec = 0.5;
+	const double slowBlendThisStep = 1.0 - std::pow(1.0 - slowBlendPerSec, dt);
+	
+	for (int i = 0; i < currentDancer.numJoints; ++i)
+	{
+		const DancerJoint & jSrc = currentDancer.joints[i];
+		DancerJoint & jDst = currentDancerSlow.joints[i];
+		
+		jDst.x = Mix(jDst.x, jSrc.x, slowBlendThisStep);
+		jDst.y = Mix(jDst.y, jSrc.y, slowBlendThisStep);
+	}
 	
 	for (int s = 0; s < 20; ++s)
 	{
@@ -674,7 +698,7 @@ void VfxNodeCCL::draw() const
 				}
 			}
 			
-			currentDancer.draw();
+			currentDancerSlow.draw();
 		}
 		gxPopMatrix();
 		
@@ -916,7 +940,8 @@ void VfxNodeCCL::mutate(Dancer & d)
 		s.spasmFrequency = std::max(0.0, s.spasmFrequency);
 		s.springFactor = std::max(0.0, s.springFactor);
 		
-		s.desiredDistance += random(-1.0, +1.0);
+		//s.desiredDistance += random(-1.0, +1.0) * 10.0;
+		s.desiredDistance += random(-1.0, +1.0) * 50.0;
 		s.desiredDistance = std::max(0.0, s.desiredDistance);
 	}
 }
