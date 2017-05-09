@@ -184,6 +184,7 @@ struct VfxNodeCCL : VfxNodeBase
 	Mat4x4 frameTransform;
 	
 	Dancer currentDancer;
+	Dancer currentDancerSlow;
 	Dancer fittestDancer;
 	Dancer dancer[kNumDancers];
 	double timeToNextGeneration;

@@ -3,6 +3,8 @@
 
 static const double eps = 0.00001;
 
+static DancerEnv env;
+
 static double Mix(const double a, const double b, const double t)
 {
 	const double t1 = 1.0 - t;
@@ -57,11 +59,25 @@ double Dancer::calculateFitness() const
 
 void Dancer::randomize()
 {
+#if 1
+	const int numPoints = (rand() % (kMaxJoints - 3)) + 3;
+	
+	float points[numPoints * 3];
+	
+	for (int i = 0; i < numPoints; ++i)
+	{
+		points[i * 3 + 0] = random(-100.0, +100.0);
+		points[i * 3 + 1] = random(-200.0, +200.0);
+		points[i * 3 + 2] = 0.0;
+	}
+	
+	constructFromPoints(points, numPoints);
+#else
 	memset(this, 0, sizeof(*this));
 	
-	numJoints = rand() % kMaxJoints;
+	numJoints = (rand() % (kMaxJoints - 3)) + 3;
 	
-	dampeningPerSecond = 0.9;
+	dampeningPerSecond = 0.8;
 	
 	for (int i = 0; i < numJoints; ++i)
 	{
@@ -78,13 +94,14 @@ void Dancer::randomize()
 	{
 		DancerJoint & j = joints[i];
 		
-		j.x = random(0.0, 1000.0);
-		j.y = random(0.0, 700.0);
+		j.x = random(-100.0, +100.0);
+		j.y = random(-200.0, +200.0);
 	}
 	
 	randomizeSpringFactors();
 	
 	finalize();
+#endif
 }
 
 void Dancer::randomizeSpringFactors()
@@ -180,7 +197,7 @@ void Dancer::constructFromPoints(const float * points, const int numPoints)
 		
 		DancerJoint & jt = joints[i];
 		
-		for (int i = 0; jt.numConnections < 6 && i < candidates.size(); ++i)
+		for (int i = 0; jt.numConnections < env.numConnectedJoints && i < candidates.size(); ++i)
 		{
 			Connection & c = candidates[i];
 			
@@ -263,27 +280,30 @@ void Dancer::tick(const double dt)
 	
 	for (int i = 0; i < numSteps; ++i)
 	{
-		// apply spasms
-		
-		for (int j = 0; j < numSprings; ++j)
+		if (env.useSpasms)
 		{
-			DancerSpring & s = springs[j];
-			DancerJoint & j1 = joints[s.jointIndex1];
-			DancerJoint & j2 = joints[s.jointIndex2];
-			const double dx = j2.x - j1.x;
-			const double dy = j2.y - j1.y;
-			const double ds = std::hypot(dx, dy) + eps;
-			const double nx = dx / ds;
-			const double ny = dy / ds;
+			// apply spasms
 			
-			s.spasmPhase += s.spasmFrequency * dtReal;
-			
-			const double speed = std::sin(s.spasmPhase) * 5.0 / 2.0;
-			
-			j1.vx += nx * speed;
-			j1.vy += ny * speed;
-			j2.vx -= nx * speed;
-			j2.vy -= ny * speed;
+			for (int j = 0; j < numSprings; ++j)
+			{
+				DancerSpring & s = springs[j];
+				DancerJoint & j1 = joints[s.jointIndex1];
+				DancerJoint & j2 = joints[s.jointIndex2];
+				const double dx = j2.x - j1.x;
+				const double dy = j2.y - j1.y;
+				const double ds = std::hypot(dx, dy) + eps;
+				const double nx = dx / ds;
+				const double ny = dy / ds;
+				
+				s.spasmPhase += s.spasmFrequency * dtReal;
+				
+				const double speed = std::sin(s.spasmPhase) * 5.0 / 2.0;
+				
+				j1.vx += nx * speed;
+				j1.vy += ny * speed;
+				j2.vx -= nx * speed;
+				j2.vy -= ny * speed;
+			}
 		}
 		
 		for (int j = 0; j < numJoints; ++j)
@@ -295,12 +315,12 @@ void Dancer::tick(const double dt)
 			
 			// gravity
 			
-			//jt.ay += 100.0;
+			jt.ay += env.gravityY;
 			
 			// collision
 			
-			//if (jt.y > 150.0)
-			//	jt.y = 150.0;
+			if (jt.y > env.collisionY)
+				jt.y = env.collisionY;
 		}
 		
 		for (int j = 0; j < numSprings; ++j)
@@ -318,19 +338,23 @@ void Dancer::tick(const double dt)
 			const double dd = ds - s.desiredDistance;
 			const double a = dd * s.springFactor;
 			
-		#if 0
-			const double fitting = 1.0 / 2.0 / 100.0;
-			j1.x += dd * nx * fitting;
-			j1.y += dd * ny * fitting;
-			j2.x -= dd * nx * fitting;
-			j2.y -= dd * ny * fitting;
-		#else
-			j1.ax += nx * a;
-			j1.ay += ny * a;
+			if (env.useDistanceConstraint)
+			{
+				const double fitting = 1.0 / 2.0 / 2.0;
+				j1.x += dd * nx * fitting * env.xFactor;
+				j1.y += dd * ny * fitting * env.yFactor;
+				j2.x -= dd * nx * fitting * env.xFactor;
+				j2.y -= dd * ny * fitting * env.yFactor;
+			}
 			
-			j2.ax -= nx * a;
-			j2.ay -= ny * a;
-		#endif
+			if (env.useSprings)
+			{
+				j1.ax += nx * a;
+				j1.ay += ny * a;
+				
+				j2.ax -= nx * a;
+				j2.ay -= ny * a;
+			}
 		}
 		
 		for (int j = 0; j < numJoints; ++j)
@@ -343,8 +367,8 @@ void Dancer::tick(const double dt)
 			jt.vx *= dampeningPerStep;
 			jt.vy *= dampeningPerStep;
 			
-			//jt.x += jt.vx * dtReal;
-			jt.y += jt.vy * dtReal;
+			jt.x += jt.vx * dtReal * env.xFactor;
+			jt.y += jt.vy * dtReal * env.yFactor;
 		}
 	}
 	

@@ -26,6 +26,31 @@ struct DancerSpring
 	double spasmPhase;
 };
 
+struct DancerEnv
+{
+	int numConnectedJoints;
+	
+	double gravityY;
+	double collisionY;
+	bool useDistanceConstraint;
+	bool useSprings;
+	bool useSpasms;
+	double xFactor;
+	double yFactor;
+	
+	DancerEnv()
+		: numConnectedJoints(5)
+		, gravityY(100.0)
+		, collisionY(250.0)
+		, useDistanceConstraint(true)
+		, useSprings(false)
+		, useSpasms(false)
+		, xFactor(0.0)
+		, yFactor(1.0)
+	{
+	}
+};
+
 struct Dancer
 {
 	static const int kMaxJoints = 32;
