@@ -1,6 +1,16 @@
 #include "cclDancer.h"
 #include "framework.h"
 
+static const double eps = 0.00001;
+
+static double Mix(const double a, const double b, const double t)
+{
+	const double t1 = 1.0 - t;
+	const double t2 = t;
+	
+	return a * t1 + b * t2;
+}
+
 Dancer::Dancer()
 {
 	memset(this, 0, sizeof(*this));
@@ -36,7 +46,7 @@ void Dancer::calculateMinMax(double * min, double * max) const
 
 double Dancer::calculateFitness() const
 {
-	const double sy = max[1] - min[1];
+	const double sy = max[1] - min[1] + eps;
 	
 	if (sy == 0.0)
 		return 0.0;
@@ -210,7 +220,6 @@ void Dancer::tick(const double dt)
 	if (dt <= 0.f)
 		return;
 	
-	const double eps = 0.00001;
 	const double dtMax = 1.0 / 100.0;
 	
 	const int numSteps = int(std::ceil(dt / dtMax));
@@ -365,4 +374,17 @@ void Dancer::draw() const
 		}
 	}
 	hqEnd();
+}
+
+void Dancer::blendTo(const Dancer & target, const double amount)
+{
+	for (int i = 0; i < numSprings; ++i)
+	{
+		DancerSpring & dst = springs[i];
+		const DancerSpring & src = target.springs[i];
+		
+		dst.desiredDistance = Mix(dst.desiredDistance, src.desiredDistance, amount);
+		dst.spasmFrequency = Mix(dst.spasmFrequency, src.spasmFrequency, amount);
+		dst.springFactor = Mix(dst.springFactor, src.springFactor, amount);
+	}
 }

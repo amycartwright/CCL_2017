@@ -416,6 +416,7 @@ VfxNodeCCL::VfxNodeCCL()
 	addOutput(kOutput_Image, kVfxPlugType_Image, outputImage);
 	
 	currentDancer.randomize();
+	fittestDancer = currentDancer;
 	
 	for (int i = 0; i < kNumDancers; ++i)
 	{
@@ -434,6 +435,8 @@ VfxNodeCCL::~VfxNodeCCL()
 
 void VfxNodeCCL::tick(const float dt)
 {
+	const double blendToPerSecond = 0.5; // todo : get input
+	const double blendToThisFrame = std::pow(blendToPerSecond, dt);
 	const char * newFilename = getInputString(kInput_Filename, "");
 	const bool useOsc = getInputBool(kInput_UseOsc, false);
 	
@@ -523,6 +526,7 @@ void VfxNodeCCL::tick(const float dt)
 		}
 		
 		currentDancer.constructFromPoints(points, motionFrame.numPoints);
+		fittestDancer = currentDancer;
 		
 		for (int i = 0; i < kNumDancers; ++i)
 		{
@@ -530,9 +534,11 @@ void VfxNodeCCL::tick(const float dt)
 		}
 	}
 	
+	currentDancer.blendTo(fittestDancer, blendToThisFrame);
+	
 	currentDancer.tick(dt);
 	
-	for (int s = 0; s < 10; ++s)
+	for (int s = 0; s < 20; ++s)
 	{
 		timeToNextGeneration -= dt;
 		
@@ -852,7 +858,6 @@ void VfxNodeCCL::calculateNextGeneration()
 		{
 			Dancer & n = nextGeneration[nextIndex];
 			
-			//n = breed(currentDancer, *d1, *d2);
 			n = breed(*bestDancer, *d1, *d2);
 			
 			mutate(n);
@@ -861,7 +866,7 @@ void VfxNodeCCL::calculateNextGeneration()
 		}
 	}
 	
-	currentDancer = *bestDancer;
+	fittestDancer = *bestDancer;
 	
 	for (int i = 0; i < kNumDancers; ++i)
 	{

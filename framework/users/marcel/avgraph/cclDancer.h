@@ -57,4 +57,6 @@ struct Dancer
 	
 	void tick(const double dt);
 	void draw() const;
+	
+	void blendTo(const Dancer & target, const double amount);
 };
