@@ -46,16 +46,24 @@ void Dancer::calculateMinMax(double * min, double * max) const
 	}
 }
 
-double Dancer::calculateFitness() const
+double Dancer::calculateFitness(const int fitnessFunction) const
 {
 	const double sy = max[1] - min[1] + eps;
-	
-	if (sy == 0.0)
-		return eps;
-	else
-		return 1.0 / sy;
-		//return sy;
+    
+    if (fitnessFunction == 0)
+    {
+        if (sy == 0.0)
+            return eps;
+        else
+            return 1.0 / sy;
+            //return sy;
+    }
+    else
+    {
+        return sy;
+    }
 }
+
 
 void Dancer::randomize()
 {
@@ -244,7 +252,7 @@ void Dancer::finalize()
 	}
 }
 
-void Dancer::tick(const double dt)
+void Dancer::tick(const double dt, const int fitnessFunction)
 {
 	if (dt <= 0.f)
 		return;
@@ -287,7 +295,14 @@ void Dancer::tick(const double dt)
 	
 	for (int i = 0; i < numSteps; ++i)
 	{
+<<<<<<< HEAD
+		// apply spasms
+		
+    #if 0
+		for (int j = 0; j < numSprings; ++j)
+=======
 		if (env.useSpasms)
+>>>>>>> f74c2dd51d7d7a0082a424343ab627cfc5d896dc
 		{
 			// apply spasms
 			
@@ -312,6 +327,7 @@ void Dancer::tick(const double dt)
 				j2.vy -= ny * speed;
 			}
 		}
+    #endif
 		
 		for (int j = 0; j < numJoints; ++j)
 		{
@@ -322,12 +338,21 @@ void Dancer::tick(const double dt)
 			
 			// gravity
 			
+<<<<<<< HEAD
+			jt.ay += 100.0;
+			
+			// collision
+			
+			if (jt.y > 250.0)
+				jt.y = 250.0;
+=======
 			jt.ay += env.gravityY;
 			
 			// collision
 			
 			if (jt.y > env.collisionY)
 				jt.y = env.collisionY;
+>>>>>>> f74c2dd51d7d7a0082a424343ab627cfc5d896dc
 		}
 		
 		for (int j = 0; j < numSprings; ++j)
@@ -381,7 +406,7 @@ void Dancer::tick(const double dt)
 	
 	calculateMinMax(min, max);
 	
-	totalFitnessValue += calculateFitness() * dt;
+	totalFitnessValue += calculateFitness(fitnessFunction) * dt;
 }
 
 void Dancer::draw() const

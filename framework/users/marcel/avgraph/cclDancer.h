@@ -73,14 +73,14 @@ struct Dancer
 	
 	void calculateMinMax(double * min, double * max) const;
 	
-	double calculateFitness() const;
+	double calculateFitness(const int fitnessFunction) const;
 	
 	void randomize();
 	void randomizeSpringFactors();
 	void constructFromPoints(const float * xyz, const int numPoints);
 	void finalize();
 	
-	void tick(const double dt);
+	void tick(const double dt, const int fitnessFunction);
 	void draw() const;
 	
 	void blendTo(const Dancer & target, const double amount);

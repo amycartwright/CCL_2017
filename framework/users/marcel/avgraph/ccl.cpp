@@ -425,6 +425,7 @@ VfxNodeCCL::VfxNodeCCL()
 	addInput(kInput_OscScale, kVfxPlugType_Float);
 	addInput(kInput_ShowGeneticDancers, kVfxPlugType_Bool);
 	addInput(kInput_VisualDancerBlendPerSecond, kVfxPlugType_Float);
+    addInput(kInput_FitnessFunction, kVfxPlugType_Int);
 	addOutput(kOutput_Image, kVfxPlugType_Image, outputImage);
 	
 	currentDancer.randomize();
@@ -452,6 +453,7 @@ void VfxNodeCCL::tick(const float dt)
 	const double blendToThisFrame = 1.0 - std::pow(1.0 - blendToPerSecond, dt);
 	const char * newFilename = getInputString(kInput_Filename, "");
 	const bool useOsc = getInputBool(kInput_UseOsc, false);
+    const int fitnessFuntion = getInputInt(kInput_FitnessFunction, 0);
 	
 	// reload data, if necessary
 	
@@ -550,7 +552,7 @@ void VfxNodeCCL::tick(const float dt)
 	
 	currentDancer.blendTo(fittestDancer, blendToThisFrame);
 	
-	currentDancer.tick(dt);
+	currentDancer.tick(dt, fitnessFuntion);
 	
 	const double slowBlendPerSec = 0.5;
 	const double slowBlendThisStep = 1.0 - std::pow(1.0 - slowBlendPerSec, dt);
@@ -577,7 +579,7 @@ void VfxNodeCCL::tick(const float dt)
 		
 		for (int i = 0; i < kNumDancers; ++i)
 		{
-			dancer[i].tick(dt);
+			dancer[i].tick(dt, fitnessFuntion);
 		}
 	}
 	
@@ -594,6 +596,7 @@ void VfxNodeCCL::draw() const
 	const float blurV = getInputFloat(kInput_BlurV, 0.f);
 	const int fixedJoint = getInputInt(kInput_FixedJoint, -1);
 	const bool showVirtualDancers = getInputBool(kInput_ShowGeneticDancers, false);
+    const int fitnessFuntion = getInputInt(kInput_FitnessFunction, 0);
 	
 	pushSurface(surface);
 	{
@@ -640,7 +643,7 @@ void VfxNodeCCL::draw() const
 					const double textX = x * scale;
 					const double textY = (d.max[1] - d.min[1]) * scale;
 					
-					drawText(textX, textY +  0, 18, +1, +1, "%f", d.calculateFitness());
+					drawText(textX, textY +  0, 18, +1, +1, "%f", d.calculateFitness(fitnessFuntion));
 					drawText(textX, textY + 20, 18, +1, +1, "%f", d.totalFitnessValue);
 					
 					x += sx;
@@ -932,7 +935,7 @@ void VfxNodeCCL::mutate(Dancer & d)
 		DancerSpring & s = d.springs[i];
 		
 		s.spasmFrequency += random(-0.1, +0.1);
-		s.springFactor += random(-20.0, +20.0);
+		s.springFactor += random(-5.0, +5.0);
 		
 		s.spasmFrequency = std::max(0.0, s.spasmFrequency);
 		s.springFactor = std::max(0.0, s.springFactor);

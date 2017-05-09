@@ -164,6 +164,7 @@ struct VfxNodeCCL : VfxNodeBase
 		kInput_OscScale,
 		kInput_ShowGeneticDancers,
 		kInput_VisualDancerBlendPerSecond,
+        kInput_FitnessFunction,
 		kInput_COUNT
 	};
 	
