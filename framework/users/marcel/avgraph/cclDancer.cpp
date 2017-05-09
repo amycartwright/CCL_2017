@@ -122,16 +122,23 @@ void Dancer::constructFromPoints(const float * points, const int numPoints)
 {
 	memset(this, 0, sizeof(*this));
 	
-	numJoints = numPoints;
-	
 	dampeningPerSecond = 0.9;
 	
-	for (int i = 0; i < numJoints; ++i)
+	for (int i = 0; i < numPoints; ++i)
 	{
-		DancerJoint & j = joints[i];
+		const double x = points[i * 3 + 0];
+		const double y = points[i * 3 + 1];
 		
-		j.x = points[i * 3 + 0];
-		j.y = points[i * 3 + 1];
+		if (std::isnan(x) ||
+			std::isnan(y))
+		{
+			continue;
+		}
+		
+		DancerJoint & j = joints[numJoints++];
+		
+		j.x = x;
+		j.y = y;
 		
 		Assert(!std::isnan(j.x));
 		Assert(!std::isnan(j.y));
