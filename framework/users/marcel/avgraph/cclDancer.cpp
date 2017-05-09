@@ -49,7 +49,7 @@ double Dancer::calculateFitness() const
 	const double sy = max[1] - min[1] + eps;
 	
 	if (sy == 0.0)
-		return 0.0;
+		return eps;
 	else
 		return 1.0 / sy;
 		//return sy;
@@ -115,6 +115,11 @@ void Dancer::constructFromPoints(const float * points, const int numPoints)
 		
 		j.x = points[i * 3 + 0];
 		j.y = points[i * 3 + 1];
+		
+		Assert(!std::isnan(j.x));
+		Assert(!std::isnan(j.y));
+		Assert(!std::isinf(j.x));
+		Assert(!std::isinf(j.y));
 	}
 	
 	calculateMinMax(min, max);
@@ -223,6 +228,10 @@ void Dancer::tick(const double dt)
 	const double dtMax = 1.0 / 100.0;
 	
 	const int numSteps = int(std::ceil(dt / dtMax));
+	
+	if (numSteps <= 0)
+		return;
+	
 	const double dtReal = dt / numSteps;
 	
 	const double dampeningPerStep = std::pow(1.0 - dampeningPerSecond, dtReal);
@@ -239,7 +248,7 @@ void Dancer::tick(const double dt)
 			DancerJoint & j2 = joints[s.jointIndex2];
 			const double dx = j2.x - j1.x;
 			const double dy = j2.y - j1.y;
-			const double ds = std::hypot(dx, dy);
+			const double ds = std::hypot(dx, dy) + eps;
 			const double nx = dx / ds;
 			const double ny = dy / ds;
 			
@@ -263,7 +272,7 @@ void Dancer::tick(const double dt)
 			DancerJoint & j2 = joints[s.jointIndex2];
 			const double dx = j2.x - j1.x;
 			const double dy = j2.y - j1.y;
-			const double ds = std::hypot(dx, dy);
+			const double ds = std::hypot(dx, dy) + eps;
 			const double nx = dx / ds;
 			const double ny = dy / ds;
 			

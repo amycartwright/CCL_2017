@@ -25,6 +25,8 @@ using json = nlohmann::json;
 
 //
 
+static const double eps = 0.01;
+
 static int xIndex = 0;
 static int yIndex = 2;
 
@@ -354,8 +356,6 @@ bool MotionBankProvider::provide(const float time, MotionFrame & frame)
 			frame.points[index].p[1] = joint.py.interp(time);
 			frame.points[index].p[2] = joint.pz.interp(time);
 			
-			const float eps = .01f;
-			
 			frame.points[index].v[0] = (joint.px.interp(time + eps) - joint.px.interp(time)) / eps;
 			frame.points[index].v[1] = (joint.py.interp(time + eps) - joint.py.interp(time)) / eps;
 			frame.points[index].v[2] = (joint.pz.interp(time + eps) - joint.pz.interp(time)) / eps;
@@ -587,6 +587,8 @@ void VfxNodeCCL::draw() const
 				totalSx += sx;
 			}
 			
+			totalSx += eps;
+			
 			const double scale = GFX_SX / totalSx;
 			
 			double x = 0.0;
@@ -721,8 +723,6 @@ void VfxNodeCCL::draw() const
 
 void VfxNodeCCL::analyzeFrame(MotionFrame & frame, MotionFrameAnalysis & analysis)
 {
-	const float eps = .0001f;
-	
 	// todo : calculate metrics related to posture, movement speed, and whatnot
 	
 	analysis = MotionFrameAnalysis();
