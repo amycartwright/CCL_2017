@@ -66,29 +66,62 @@ double Dancer::calculateFitness(const int fitnessFunction) const
     }
 	else
 	{
-		double p1[kMaxJoints];
-		double p2[kMaxJoints];
+		double totalDistance = 0.0;
 		
 		const int numPoints = std::min(numJoints, env.liveData.numPoints);
 		
-		for (int i = 0; i < numPoints; ++i)
+		if (numPoints > 0)
 		{
-			p1[i] = joints[i].y;
-			p2[i] = env.liveData.y[i];
-		}
-		
-		std::sort(p1, p1 + numPoints);
-		std::sort(p2, p2 + numPoints);
-		
-		double totalDistance = 0.0;
-		
-		for (int i = 0; i < numPoints; ++i)
-		{
-			const double dx = (p2[i] - p1[i]) * env.xFactor;
-			const double dy = (p2[i] - p1[i]) * env.yFactor;
-			const double distance = dx * dx + dy * dy;
+			double py1[kMaxJoints];
+			double py2[kMaxJoints];
 			
-			totalDistance += distance;
+			double px1[kMaxJoints];
+			double px2[kMaxJoints];
+			
+			for (int i = 0; i < numPoints; ++i)
+			{
+				px1[i] = joints[i].x;
+				py1[i] = joints[i].y;
+				
+				px2[i] = env.liveData.x[i];
+				py2[i] = env.liveData.y[i];
+			}
+			
+			std::sort(px1, px1 + numPoints);
+			std::sort(py1, py1 + numPoints);
+			
+			std::sort(px2, px2 + numPoints);
+			std::sort(py2, py2 + numPoints);
+			
+			double totalDxSq = 0.0;
+			double totalDySq = 0.0;
+			
+			double minX2 = px2[0];
+			double maxX2 = px2[0];
+			
+			for (int i = 0; i < numPoints; ++i)
+			{
+				const double dx = std::abs(px2[i] - px1[i]) * env.xFactor;
+				const double dy = std::abs(py2[i] - py1[i]) * env.yFactor;
+				
+				totalDxSq += dx * dx;
+				totalDySq += dy * dy;
+				
+				minX2 = std::min(minX2, px2[i]);
+				maxX2 = std::max(maxX2, px2[i]);
+			}
+			
+			//totalDistance += totalDxSq;
+			totalDistance += totalDySq;
+			
+			//
+			
+			const double sx1 = max[0] - min[0];
+			const double sx2 = maxX2 - minX2;
+			//const double dsx = std::abs(sx2 - sx1);
+			const double dsx = std::abs(0.0 - sx1) * env.xFactor;
+			
+			totalDistance += dsx * dsx * numPoints;
 		}
 		
 		totalDistance += 1.0;

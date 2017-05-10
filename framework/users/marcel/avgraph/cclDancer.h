@@ -66,7 +66,7 @@ struct DancerEnv
 		, useDistanceConstraint(true)
 		, useSprings(false)
 		, useSpasms(false)
-		, xFactor(0.5)
+		, xFactor(0.0)
 		, yFactor(1.0)
 		, liveData()
 	{
