@@ -401,7 +401,7 @@ VfxNodeCCL::VfxNodeCCL()
 	, dancer()
 	, timeToNextGeneration(3.0)
 	, timeToNextFitnessFunction(0.0)
-	, currentFitnessFunction(0)
+	, currentFitnessFunction(kFitnessFunction_GetSmall)
 	, filename()
 	, time(0.f)
 	, motionFrame()
@@ -439,6 +439,7 @@ VfxNodeCCL::VfxNodeCCL()
 	addInput(kInput_EnvUseSpasms, kVfxPlugType_Bool);
 	addInput(kInput_EnvUseSprings, kVfxPlugType_Bool);
 	addInput(kInput_EnvUseDistanceConstraint, kVfxPlugType_Bool);
+	addInput(kInput_ShowMotionData, kVfxPlugType_Bool);
 	
 	addOutput(kOutput_Image, kVfxPlugType_Image, outputImage);
 	
@@ -468,7 +469,7 @@ void VfxNodeCCL::tick(const float dt)
 	const char * newFilename = getInputString(kInput_Filename, "");
 	const bool useOsc = getInputBool(kInput_UseOsc, false);
     //const int fitnessFunction = getInputInt(kInput_FitnessFunction, 0);
-	const int fitnessFunction = currentFitnessFunction;
+	const FitnessFunction fitnessFunction = currentFitnessFunction;
 	const int bodyConnectivity = getInputInt(kInput_BodyConnectivity, 4);
 	const float bodyDistance = getInputFloat(kInput_BodyDistance, 1.f);
 	const float envGravity = getInputFloat(kInput_EnvGravity, 0.f);
@@ -623,7 +624,7 @@ void VfxNodeCCL::tick(const float dt)
 	{
 		timeToNextFitnessFunction = 10.0;
 		
-		currentFitnessFunction = rand() % 3;
+		currentFitnessFunction = (FitnessFunction)(rand() % kFitnessFunction_COUNT);
 	}
 	
 	currentDancer.blendTo(fittestDancer, blendToThisFrame);
@@ -673,7 +674,10 @@ void VfxNodeCCL::draw() const
 	const int fixedJoint = getInputInt(kInput_FixedJoint, -1);
 	const bool showVirtualDancers = getInputBool(kInput_ShowGeneticDancers, false);
     //const int fitnessFunction = getInputInt(kInput_FitnessFunction, 0);
-	const int fitnessFunction = currentFitnessFunction;
+	const FitnessFunction fitnessFunction = currentFitnessFunction;
+	const bool showMotionData = getInputBool(kInput_ShowMotionData, false);
+	
+	env.debugDraw = showJointNames;
 	
 	pushSurface(surface);
 	{
@@ -731,47 +735,50 @@ void VfxNodeCCL::draw() const
 		
 		gxPushMatrix();
 		{
-			gxTranslatef(GFX_SX/2, GFX_SY/2, 1.f);
+			gxTranslatef(GFX_SX/2, GFX_SY/2, 0.f);
 			
-			if (fixedJoint >= 0 && fixedJoint < motionFrame.numPoints)
+			if (showMotionData)
 			{
-				const MotionPoint & mp = motionFrame.points[fixedJoint];
-				gxTranslatef(-mp.p[xIndex], -mp.p[yIndex], 0.f);
-			}
-			
-			hqBegin(HQ_FILLED_CIRCLES);
-			{
-				for (int i = 0; i < motionFrame.numPoints; ++i)
-				{
-					const MotionPoint & mp = motionFrame.points[i];
-					
-					//setColor(colorWhite);
-					setColorf(mp.v[0] * vColorScale + .5f, mp.v[1] * vColorScale + .5f, mp.v[2] * vColorScale + .5f);
-					hqFillCircle(mp.p[xIndex], mp.p[yIndex], 5.f);
-				}
-			}
-			hqEnd();
-			
-			if (showJointNames)
-			{
-				setFont("calibri.ttf");
-				setColor(colorWhite);
-				for (int i = 0; i < motionFrame.numPoints; ++i)
-				{
-					const MotionPoint & mp = motionFrame.points[i];
-					
-					if (mp.name)
-					{
-						drawText(mp.p[xIndex], mp.p[yIndex], 12, 0, 0, "%s", mp.name->c_str());
-					}
-				}
-				
 				if (fixedJoint >= 0 && fixedJoint < motionFrame.numPoints)
 				{
 					const MotionPoint & mp = motionFrame.points[fixedJoint];
+					gxTranslatef(-mp.p[xIndex], -mp.p[yIndex], 0.f);
+				}
+				
+				hqBegin(HQ_FILLED_CIRCLES);
+				{
+					for (int i = 0; i < motionFrame.numPoints; ++i)
+					{
+						const MotionPoint & mp = motionFrame.points[i];
+						
+						//setColor(colorWhite);
+						setColorf(mp.v[0] * vColorScale + .5f, mp.v[1] * vColorScale + .5f, mp.v[2] * vColorScale + .5f);
+						hqFillCircle(mp.p[xIndex], mp.p[yIndex], 5.f);
+					}
+				}
+				hqEnd();
+				
+				if (showJointNames)
+				{
+					setFont("calibri.ttf");
+					setColor(colorWhite);
+					for (int i = 0; i < motionFrame.numPoints; ++i)
+					{
+						const MotionPoint & mp = motionFrame.points[i];
+						
+						if (mp.name)
+						{
+							drawText(mp.p[xIndex], mp.p[yIndex], 12, 0, 0, "%s", mp.name->c_str());
+						}
+					}
 					
-					if (mp.name)
-						drawText(20, 20, 24, 0, 0, "%s", mp.name->c_str());
+					if (fixedJoint >= 0 && fixedJoint < motionFrame.numPoints)
+					{
+						const MotionPoint & mp = motionFrame.points[fixedJoint];
+						
+						if (mp.name)
+							drawText(20, 20, 24, 0, 0, "%s", mp.name->c_str());
+					}
 				}
 			}
 			
@@ -780,41 +787,44 @@ void VfxNodeCCL::draw() const
 		gxPopMatrix();
 		
 	#if 1
-		gxPushMatrix();
+		if (env.debugDraw)
 		{
-			gxTranslatef(GFX_SX/2, GFX_SY*3/5, 1.f);
-			
-			setFont("calibri.ttf");
-			int y = 0;
-			
-			setColor(colorGreen);
-			drawText(0, y, 18, 0.f, 0.f, "fitnessFunction: %d", fitnessFunction);
-			y += 20;
-			
-			/*
-			setColor(colorGreen);
-			drawText(0, y, 18, 0.f, 0.f, "size[x]: %f", analysis.size[xIndex]);
-			y += 20;
-			drawText(0, y, 18, 0.f, 0.f, "size[y]: %f", analysis.size[yIndex]);
-			y += 20;
-			y += 20;
-			
-			setColorf(1, 1, 1, analysis.wideness);
-			drawText(0, y, 18, 0.f, 0.f, "wideness: %f", analysis.wideness);
-			y += 20;
-			setColorf(1, 1, 1, analysis.narrowness);
-			drawText(0, y, 18, 0.f, 0.f, "narrowness: %f", analysis.narrowness);
-			y += 20;
-			
-			setColorf(1, 1, 1, analysis.tallness);
-			drawText(0, y, 18, 0.f, 0.f, "tallness: %f", analysis.tallness);
-			y += 20;
-			setColorf(1, 1, 1, analysis.smallness);
-			drawText(0, y, 18, 0.f, 0.f, "smallness: %f", analysis.smallness);
-			y += 20;
-			*/
+			gxPushMatrix();
+			{
+				gxTranslatef(GFX_SX/2, GFX_SY*3/5, 1.f);
+				
+				setFont("calibri.ttf");
+				int y = 0;
+				
+				setColor(colorGreen);
+				drawText(0, y, 18, 0.f, 0.f, "fitnessFunction: %s", getFitnessFunctionName(fitnessFunction));
+				y += 20;
+				
+				/*
+				setColor(colorGreen);
+				drawText(0, y, 18, 0.f, 0.f, "size[x]: %f", analysis.size[xIndex]);
+				y += 20;
+				drawText(0, y, 18, 0.f, 0.f, "size[y]: %f", analysis.size[yIndex]);
+				y += 20;
+				y += 20;
+				
+				setColorf(1, 1, 1, analysis.wideness);
+				drawText(0, y, 18, 0.f, 0.f, "wideness: %f", analysis.wideness);
+				y += 20;
+				setColorf(1, 1, 1, analysis.narrowness);
+				drawText(0, y, 18, 0.f, 0.f, "narrowness: %f", analysis.narrowness);
+				y += 20;
+				
+				setColorf(1, 1, 1, analysis.tallness);
+				drawText(0, y, 18, 0.f, 0.f, "tallness: %f", analysis.tallness);
+				y += 20;
+				setColorf(1, 1, 1, analysis.smallness);
+				drawText(0, y, 18, 0.f, 0.f, "smallness: %f", analysis.smallness);
+				y += 20;
+				*/
+			}
+			gxPopMatrix();
 		}
-		gxPopMatrix();
 	#endif
 	}
 	popSurface();
@@ -935,7 +945,7 @@ void VfxNodeCCL::calculateNextGeneration()
 		
 		const int index2 = std::min(int(currentTotal / totalFitness * kBreedingPoolSize), kBreedingPoolSize);
 		
-		logDebug("filling %d - %d", index1, index2);
+		//logDebug("filling %d - %d", index1, index2);
 		
 		for (int index = index1; index < index2; ++index)
 		{
@@ -955,7 +965,7 @@ void VfxNodeCCL::calculateNextGeneration()
 	
 	//
 	
-	logDebug("breeding!");
+	//logDebug("breeding!");
 	
 	Dancer nextGeneration[kNumDancers];
 	int nextIndex = 0;

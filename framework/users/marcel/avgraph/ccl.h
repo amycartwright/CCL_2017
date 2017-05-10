@@ -173,6 +173,7 @@ struct VfxNodeCCL : VfxNodeBase
 		kInput_EnvUseSpasms,
 		kInput_EnvUseSprings,
 		kInput_EnvUseDistanceConstraint,
+		kInput_ShowMotionData,
 		kInput_COUNT
 	};
 	
@@ -198,7 +199,7 @@ struct VfxNodeCCL : VfxNodeBase
 	Dancer dancer[kNumDancers];
 	double timeToNextGeneration;
 	double timeToNextFitnessFunction;
-	int currentFitnessFunction;
+	FitnessFunction currentFitnessFunction;
 	
 	//
 	

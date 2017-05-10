@@ -13,6 +13,23 @@ static double Mix(const double a, const double b, const double t)
 	return a * t1 + b * t2;
 }
 
+const char * getFitnessFunctionName(FitnessFunction f)
+{
+	if (f == kFitnessFunction_GetSmall)
+		return "getSmall";
+	else if (f == kFitnessFunction_GetLarge)
+		return "getLarge";
+	else if (f == kFitnessFunction_MatchPose)
+		return "matchPose";
+	else
+	{
+		Assert(false);
+		return "n/a";
+	}
+}
+
+//
+
 Dancer::Dancer()
 {
 	memset(this, 0, sizeof(*this));
@@ -46,9 +63,9 @@ void Dancer::calculateMinMax(double * min, double * max) const
 	}
 }
 
-double Dancer::calculateFitness(const int fitnessFunction) const
+double Dancer::calculateFitness(const FitnessFunction fitnessFunction) const
 {
-    if (fitnessFunction == 0)
+    if (fitnessFunction == kFitnessFunction_GetSmall)
     {
 		const double sy = max[1] - min[1] + eps;
 		
@@ -56,15 +73,14 @@ double Dancer::calculateFitness(const int fitnessFunction) const
             return eps;
         else
             return 1.0 / sy;
-            //return sy;
     }
-    else if (fitnessFunction == 1)
+    else if (fitnessFunction == kFitnessFunction_GetLarge)
     {
 		const double sy = max[1] - min[1] + eps;
 		
         return sy;
     }
-	else
+	else if (fitnessFunction == kFitnessFunction_MatchPose)
 	{
 		double totalDistance = 0.0;
 		
@@ -121,6 +137,11 @@ double Dancer::calculateFitness(const int fitnessFunction) const
 		totalDistance += 1.0;
 		
 		return 1.0 / totalDistance;
+	}
+	else
+	{
+		Assert(false);
+		return 1.0;
 	}
 }
 
@@ -315,7 +336,7 @@ void Dancer::finalize()
 	}
 }
 
-void Dancer::tick(const double dt, const int fitnessFunction)
+void Dancer::tick(const double dt, const FitnessFunction fitnessFunction)
 {
 	if (dt <= 0.f)
 		return;
@@ -476,8 +497,11 @@ void Dancer::tick(const double dt, const int fitnessFunction)
 
 void Dancer::draw() const
 {
-	setColor(colorBlue);
-	drawRectLine(min[0], min[1], max[0], max[1]);
+	if (env.debugDraw)
+	{
+		setColor(colorBlue);
+		drawRectLine(min[0], min[1], max[0], max[1]);
+	}
 	
 	for (int i = 0; i < numSprings; ++i)
 	{
