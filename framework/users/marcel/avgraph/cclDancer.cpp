@@ -499,9 +499,24 @@ void Dancer::draw() const
 {
 	if (env.debugDraw)
 	{
-		setColor(colorBlue);
+		setColor(colorRed);
 		drawRectLine(min[0], min[1], max[0], max[1]);
 	}
+	
+#if 0
+	hqBegin(HQ_STROKED_CIRCLES);
+	{
+		for (int i = 0; i < numJoints; ++i)
+		{
+			const DancerJoint & j = joints[i];
+			
+			setColor(127, 127, 255);
+			//hqFillCircle(j.x, j.y, 3.f);
+			hqStrokeCircle(j.x, j.y, 4.f, 2.f);
+		}
+	}
+	hqEnd();
+#endif
 	
 	for (int i = 0; i < numSprings; ++i)
 	{
@@ -511,23 +526,12 @@ void Dancer::draw() const
 		
 		hqBegin(HQ_LINES);
 		{
-			setColor(colorWhite);
-			hqLine(j1.x, j1.y, 2.f, j2.x, j2.y, 2.f);
+			setColor(100, 100, 100);
+			//setColor(255, 100, 100);
+			hqLine(j1.x, j1.y, 1.f, j2.x, j2.y, 1.f);
 		}
 		hqEnd();
 	}
-	
-	hqBegin(HQ_FILLED_CIRCLES);
-	{
-		for (int i = 0; i < numJoints; ++i)
-		{
-			const DancerJoint & j = joints[i];
-			
-			setColor(colorYellow);
-			hqFillCircle(j.x, j.y, 4.f);
-		}
-	}
-	hqEnd();
 }
 
 void Dancer::blendTo(const Dancer & target, const double amount)

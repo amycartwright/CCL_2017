@@ -681,7 +681,9 @@ void VfxNodeCCL::draw() const
 	
 	pushSurface(surface);
 	{
-		surface->clear(0, 0, 0);
+		surface->clear(227, 227, 227);
+		//setColor(227, 227, 227, 15);
+		//drawRect(0, 0, GFX_SX, GFX_SY);
 		
 		setColor(127, 127, 127);
 		//drawUiRectCheckered(0, 0, GFX_SX, GFX_SY, 32.f);
@@ -761,7 +763,7 @@ void VfxNodeCCL::draw() const
 				if (showJointNames)
 				{
 					setFont("calibri.ttf");
-					setColor(colorWhite);
+					setColor(colorBlue);
 					for (int i = 0; i < motionFrame.numPoints; ++i)
 					{
 						const MotionPoint & mp = motionFrame.points[i];
