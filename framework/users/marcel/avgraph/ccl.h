@@ -197,6 +197,8 @@ struct VfxNodeCCL : VfxNodeBase
 	Dancer fittestDancer;
 	Dancer dancer[kNumDancers];
 	double timeToNextGeneration;
+	double timeToNextFitnessFunction;
+	int currentFitnessFunction;
 	
 	//
 	

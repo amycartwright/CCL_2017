@@ -400,6 +400,8 @@ VfxNodeCCL::VfxNodeCCL()
 	, outputImage(nullptr)
 	, dancer()
 	, timeToNextGeneration(3.0)
+	, timeToNextFitnessFunction(0.0)
+	, currentFitnessFunction(0)
 	, filename()
 	, time(0.f)
 	, motionFrame()
@@ -465,7 +467,8 @@ void VfxNodeCCL::tick(const float dt)
 	const double blendToThisFrame = 1.0 - std::pow(1.0 - blendToPerSecond, dt);
 	const char * newFilename = getInputString(kInput_Filename, "");
 	const bool useOsc = getInputBool(kInput_UseOsc, false);
-    const int fitnessFuntion = getInputInt(kInput_FitnessFunction, 0);
+    //const int fitnessFunction = getInputInt(kInput_FitnessFunction, 0);
+	const int fitnessFunction = currentFitnessFunction;
 	const int bodyConnectivity = getInputInt(kInput_BodyConnectivity, 4);
 	const float bodyDistance = getInputFloat(kInput_BodyDistance, 1.f);
 	const float envGravity = getInputFloat(kInput_EnvGravity, 0.f);
@@ -614,9 +617,18 @@ void VfxNodeCCL::tick(const float dt)
 	
 	//
 	
+	timeToNextFitnessFunction -= dt;
+	
+	if (timeToNextFitnessFunction <= 0.0)
+	{
+		timeToNextFitnessFunction = 10.0;
+		
+		currentFitnessFunction = rand() % 3;
+	}
+	
 	currentDancer.blendTo(fittestDancer, blendToThisFrame);
 	
-	currentDancer.tick(dt, fitnessFuntion);
+	currentDancer.tick(dt, fitnessFunction);
 	
 	const double slowBlendPerSec = 0.5;
 	const double slowBlendThisStep = 1.0 - std::pow(1.0 - slowBlendPerSec, dt);
@@ -643,7 +655,7 @@ void VfxNodeCCL::tick(const float dt)
 		
 		for (int i = 0; i < kNumDancers; ++i)
 		{
-			dancer[i].tick(dt, fitnessFuntion);
+			dancer[i].tick(dt, fitnessFunction);
 		}
 	}
 	
@@ -660,7 +672,8 @@ void VfxNodeCCL::draw() const
 	const float blurV = getInputFloat(kInput_BlurV, 0.f);
 	const int fixedJoint = getInputInt(kInput_FixedJoint, -1);
 	const bool showVirtualDancers = getInputBool(kInput_ShowGeneticDancers, false);
-    const int fitnessFuntion = getInputInt(kInput_FitnessFunction, 0);
+    //const int fitnessFunction = getInputInt(kInput_FitnessFunction, 0);
+	const int fitnessFunction = currentFitnessFunction;
 	
 	pushSurface(surface);
 	{
@@ -707,7 +720,7 @@ void VfxNodeCCL::draw() const
 					const double textX = x * scale;
 					const double textY = (d.max[1] - d.min[1]) * scale;
 					
-					drawText(textX, textY +  0, 18, +1, +1, "%f", d.calculateFitness(fitnessFuntion));
+					drawText(textX, textY +  0, 18, +1, +1, "%f", d.calculateFitness(fitnessFunction));
 					drawText(textX, textY + 20, 18, +1, +1, "%f", d.totalFitnessValue);
 					
 					x += sx;
@@ -775,6 +788,11 @@ void VfxNodeCCL::draw() const
 			int y = 0;
 			
 			setColor(colorGreen);
+			drawText(0, y, 18, 0.f, 0.f, "fitnessFunction: %d", fitnessFunction);
+			y += 20;
+			
+			/*
+			setColor(colorGreen);
 			drawText(0, y, 18, 0.f, 0.f, "size[x]: %f", analysis.size[xIndex]);
 			y += 20;
 			drawText(0, y, 18, 0.f, 0.f, "size[y]: %f", analysis.size[yIndex]);
@@ -794,6 +812,7 @@ void VfxNodeCCL::draw() const
 			setColorf(1, 1, 1, analysis.smallness);
 			drawText(0, y, 18, 0.f, 0.f, "smallness: %f", analysis.smallness);
 			y += 20;
+			*/
 		}
 		gxPopMatrix();
 	#endif
