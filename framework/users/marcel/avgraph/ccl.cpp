@@ -469,8 +469,8 @@ void VfxNodeCCL::tick(const float dt)
 	const int bodyConnectivity = getInputInt(kInput_BodyConnectivity, 4);
 	const float bodyDistance = getInputFloat(kInput_BodyDistance, 1.f);
 	const float envGravity = getInputFloat(kInput_EnvGravity, 0.f);
-	const float envFactorX = getInputFloat(kInput_EnvFactorX, 1.f);
-	const float envFactorY = getInputFloat(kInput_EnvFactorY, 1.f);
+	const float envFactorX = getInputFloat(kInput_EnvFactorX, 0.f);
+	const float envFactorY = getInputFloat(kInput_EnvFactorY, 0.f);
 	const bool envUseSpasms = getInputBool(kInput_EnvUseSpasms, false);
 	const bool envUseSprings = getInputBool(kInput_EnvUseSprings, false);
 	const bool envUseDistanceConstraint = getInputBool(kInput_EnvUseDistanceConstraint, false);
