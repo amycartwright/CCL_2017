@@ -535,8 +535,8 @@ void VfxNodeCCL::tick(const float dt)
 		
 		for (int i = 0; i < motionFrame.numPoints; ++i)
 		{
-			points[i * 3 + 0] = motionFrame.points[i].p[0];
-			points[i * 3 + 1] = motionFrame.points[i].p[1];
+			points[i * 3 + 0] = motionFrame.points[i].p[xIndex];
+			points[i * 3 + 1] = motionFrame.points[i].p[yIndex];
 			points[i * 3 + 2] = motionFrame.points[i].p[2];
 		}
 		
@@ -549,6 +549,38 @@ void VfxNodeCCL::tick(const float dt)
 			dancer[i].constructFromPoints(points, motionFrame.numPoints);
 		}
 	}
+	
+	//
+	
+	env.liveData.numPoints = 0;
+	
+	if (motionFrame.numPoints > 0)
+	{
+		double maxY = motionFrame.points[0].p[yIndex];
+		
+		for (int i = 0; i < motionFrame.numPoints; ++i)
+		{
+			const double x = motionFrame.points[i].p[xIndex];
+			const double y = motionFrame.points[i].p[yIndex];
+			
+			if (isnan(x) || isnan(y))
+				continue;
+			
+			env.liveData.x[env.liveData.numPoints] = x;
+			env.liveData.y[env.liveData.numPoints] = y;
+			
+			env.liveData.numPoints++;
+			
+			if (y > maxY)
+				maxY = y;
+		}
+		
+		env.liveData.maxY = maxY;
+		
+		env.collisionY = maxY;
+	}
+	
+	//
 	
 	currentDancer.blendTo(fittestDancer, blendToThisFrame);
 	

@@ -1,5 +1,8 @@
 #pragma once
 
+static const int kMaxJoints = 128;
+static const int kMaxSprings = 1024;
+
 struct DancerJoint
 {
 	double x;
@@ -28,6 +31,23 @@ struct DancerSpring
 
 struct DancerEnv
 {
+	struct LiveData
+	{
+		int numPoints;
+		
+		double x[kMaxJoints];
+		double y[kMaxJoints];
+		double maxY;
+		
+		LiveData()
+			: numPoints(0)
+			, x()
+			, y()
+			, maxY(0.0)
+		{
+		}
+	};
+	
 	int numConnectedJoints;
 	
 	double gravityY;
@@ -37,6 +57,7 @@ struct DancerEnv
 	bool useSpasms;
 	double xFactor;
 	double yFactor;
+	LiveData liveData;
 	
 	DancerEnv()
 		: numConnectedJoints(5)
@@ -45,17 +66,15 @@ struct DancerEnv
 		, useDistanceConstraint(true)
 		, useSprings(false)
 		, useSpasms(false)
-		, xFactor(0.0)
+		, xFactor(0.5)
 		, yFactor(1.0)
+		, liveData()
 	{
 	}
 };
 
 struct Dancer
 {
-	static const int kMaxJoints = 32;
-	static const int kMaxSprings = 1024;
-	
 	DancerJoint joints[kMaxJoints];
 	DancerSpring springs[kMaxSprings];
 	
@@ -85,3 +104,5 @@ struct Dancer
 	
 	void blendTo(const Dancer & target, const double amount);
 };
+
+extern DancerEnv env;

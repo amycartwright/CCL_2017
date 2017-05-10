@@ -3,7 +3,7 @@
 
 static const double eps = 0.00001;
 
-static DancerEnv env;
+DancerEnv env;
 
 static double Mix(const double a, const double b, const double t)
 {
@@ -48,20 +48,53 @@ void Dancer::calculateMinMax(double * min, double * max) const
 
 double Dancer::calculateFitness(const int fitnessFunction) const
 {
-	const double sy = max[1] - min[1] + eps;
-    
     if (fitnessFunction == 0)
     {
+		const double sy = max[1] - min[1] + eps;
+		
         if (sy == 0.0)
             return eps;
         else
             return 1.0 / sy;
             //return sy;
     }
-    else
+    else if (fitnessFunction == 1)
     {
+		const double sy = max[1] - min[1] + eps;
+		
         return sy;
     }
+	else
+	{
+		double p1[kMaxJoints];
+		double p2[kMaxJoints];
+		
+		const int numPoints = std::min(numJoints, env.liveData.numPoints);
+		
+		for (int i = 0; i < numPoints; ++i)
+		{
+			p1[i] = joints[i].y;
+			p2[i] = env.liveData.y[i];
+		}
+		
+		std::sort(p1, p1 + numPoints);
+		std::sort(p2, p2 + numPoints);
+		
+		double totalDistance = 0.0;
+		
+		for (int i = 0; i < numPoints; ++i)
+		{
+			const double dx = (p2[i] - p1[i]) * env.xFactor;
+			const double dy = (p2[i] - p1[i]) * env.yFactor;
+			const double distance = dx * dx + dy * dy;
+			
+			totalDistance += distance;
+		}
+		
+		totalDistance += 1.0;
+		
+		return 1.0 / totalDistance;
+	}
 }
 
 
