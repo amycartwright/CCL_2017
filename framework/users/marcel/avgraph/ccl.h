@@ -165,6 +165,14 @@ struct VfxNodeCCL : VfxNodeBase
 		kInput_ShowGeneticDancers,
 		kInput_VisualDancerBlendPerSecond,
         kInput_FitnessFunction,
+		kInput_BodyConnectivity,
+		kInput_BodyDistance,
+		kInput_EnvGravity,
+		kInput_EnvFactorX,
+		kInput_EnvFactorY,
+		kInput_EnvUseSpasms,
+		kInput_EnvUseSprings,
+		kInput_EnvUseDistanceConstraint,
 		kInput_COUNT
 	};
 	

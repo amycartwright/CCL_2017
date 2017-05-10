@@ -24,6 +24,8 @@ struct DancerSpring
 	double springFactor;
 	double spasmFrequency;
 	
+	double maximumDistance;
+	
 	//
 	
 	double spasmPhase;
@@ -37,18 +39,21 @@ struct DancerEnv
 		
 		double x[kMaxJoints];
 		double y[kMaxJoints];
-		double maxY;
+		double min[2];
+		double max[2];
 		
 		LiveData()
 			: numPoints(0)
 			, x()
 			, y()
-			, maxY(0.0)
+			, min()
+			, max()
 		{
 		}
 	};
 	
 	int numConnectedJoints;
+	float maxDistanceFactor;
 	
 	double gravityY;
 	double collisionY;
@@ -61,12 +66,13 @@ struct DancerEnv
 	
 	DancerEnv()
 		: numConnectedJoints(5)
+		, maxDistanceFactor(2.f)
 		, gravityY(100.0)
 		, collisionY(250.0)
 		, useDistanceConstraint(true)
 		, useSprings(false)
 		, useSpasms(false)
-		, xFactor(0.0)
+		, xFactor(1.0)
 		, yFactor(1.0)
 		, liveData()
 	{
@@ -82,6 +88,8 @@ struct Dancer
 	int numSprings;
 	
 	double dampeningPerSecond;
+	
+	double accelTowardsOtherDancer;
 	
 	double min[2];
 	double max[2];

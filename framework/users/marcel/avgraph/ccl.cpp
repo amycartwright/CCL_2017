@@ -412,6 +412,7 @@ VfxNodeCCL::VfxNodeCCL()
 	//
 	
 	resizeSockets(kInput_COUNT, kOutput_COUNT);
+	
 	addInput(kInput_Filename, kVfxPlugType_String);
 	addInput(kInput_ShowJointNames, kVfxPlugType_Bool);
 	addInput(kInput_ReplaySpeed, kVfxPlugType_Float);
@@ -426,6 +427,17 @@ VfxNodeCCL::VfxNodeCCL()
 	addInput(kInput_ShowGeneticDancers, kVfxPlugType_Bool);
 	addInput(kInput_VisualDancerBlendPerSecond, kVfxPlugType_Float);
     addInput(kInput_FitnessFunction, kVfxPlugType_Int);
+	
+	addInput(kInput_BodyConnectivity, kVfxPlugType_Int);
+	addInput(kInput_BodyDistance, kVfxPlugType_Float);
+	
+	addInput(kInput_EnvGravity, kVfxPlugType_Float);
+	addInput(kInput_EnvFactorX, kVfxPlugType_Float);
+	addInput(kInput_EnvFactorY, kVfxPlugType_Float);
+	addInput(kInput_EnvUseSpasms, kVfxPlugType_Bool);
+	addInput(kInput_EnvUseSprings, kVfxPlugType_Bool);
+	addInput(kInput_EnvUseDistanceConstraint, kVfxPlugType_Bool);
+	
 	addOutput(kOutput_Image, kVfxPlugType_Image, outputImage);
 	
 	currentDancer.randomize();
@@ -454,6 +466,23 @@ void VfxNodeCCL::tick(const float dt)
 	const char * newFilename = getInputString(kInput_Filename, "");
 	const bool useOsc = getInputBool(kInput_UseOsc, false);
     const int fitnessFuntion = getInputInt(kInput_FitnessFunction, 0);
+	const int bodyConnectivity = getInputInt(kInput_BodyConnectivity, 4);
+	const float bodyDistance = getInputFloat(kInput_BodyDistance, 1.f);
+	const float envGravity = getInputFloat(kInput_EnvGravity, 0.f);
+	const float envFactorX = getInputFloat(kInput_EnvFactorX, 1.f);
+	const float envFactorY = getInputFloat(kInput_EnvFactorY, 1.f);
+	const bool envUseSpasms = getInputBool(kInput_EnvUseSpasms, false);
+	const bool envUseSprings = getInputBool(kInput_EnvUseSprings, false);
+	const bool envUseDistanceConstraint = getInputBool(kInput_EnvUseDistanceConstraint, false);
+	
+	env.numConnectedJoints = bodyConnectivity;
+	env.maxDistanceFactor = bodyDistance;
+	env.gravityY = envGravity;
+	env.xFactor = envFactorX;
+	env.yFactor = envFactorY;
+	env.useSpasms = envUseSpasms;
+	env.useSprings = envUseSprings;
+	env.useDistanceConstraint = envUseDistanceConstraint;
 	
 	// reload data, if necessary
 	
@@ -556,7 +585,10 @@ void VfxNodeCCL::tick(const float dt)
 	
 	if (motionFrame.numPoints > 0)
 	{
-		double maxY = motionFrame.points[0].p[yIndex];
+		env.liveData.min[0] = motionFrame.points[0].p[xIndex];
+		env.liveData.min[1] = motionFrame.points[0].p[yIndex];
+		env.liveData.max[0] = motionFrame.points[0].p[xIndex];
+		env.liveData.max[1] = motionFrame.points[0].p[yIndex];
 		
 		for (int i = 0; i < motionFrame.numPoints; ++i)
 		{
@@ -571,13 +603,13 @@ void VfxNodeCCL::tick(const float dt)
 			
 			env.liveData.numPoints++;
 			
-			if (y > maxY)
-				maxY = y;
+			env.liveData.min[0] = std::min(env.liveData.min[0], x);
+			env.liveData.min[1] = std::min(env.liveData.min[1], y);
+			env.liveData.max[0] = std::max(env.liveData.max[0], x);
+			env.liveData.max[1] = std::max(env.liveData.max[1], y);
 		}
 		
-		env.liveData.maxY = maxY;
-		
-		env.collisionY = maxY;
+		env.collisionY = env.liveData.max[1];
 	}
 	
 	//
@@ -974,7 +1006,8 @@ void VfxNodeCCL::mutate(Dancer & d)
 		
 		//s.desiredDistance += random(-1.0, +1.0) * 10.0;
 		s.desiredDistance += random(-1.0, +1.0) * 50.0;
-		s.desiredDistance = std::max(0.0, s.desiredDistance);
+		s.desiredDistance = std::max(s.desiredDistance, 0.0);
+		s.desiredDistance = std::min(s.desiredDistance, s.maximumDistance);
 	}
 }
 

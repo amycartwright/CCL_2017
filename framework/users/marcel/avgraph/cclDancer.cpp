@@ -96,9 +96,6 @@ double Dancer::calculateFitness(const int fitnessFunction) const
 			double totalDxSq = 0.0;
 			double totalDySq = 0.0;
 			
-			double minX2 = px2[0];
-			double maxX2 = px2[0];
-			
 			for (int i = 0; i < numPoints; ++i)
 			{
 				const double dx = std::abs(px2[i] - px1[i]) * env.xFactor;
@@ -106,22 +103,19 @@ double Dancer::calculateFitness(const int fitnessFunction) const
 				
 				totalDxSq += dx * dx;
 				totalDySq += dy * dy;
-				
-				minX2 = std::min(minX2, px2[i]);
-				maxX2 = std::max(maxX2, px2[i]);
 			}
 			
 			//totalDistance += totalDxSq;
-			totalDistance += totalDySq;
+			totalDistance += std::sqrt(totalDySq);
 			
 			//
 			
 			const double sx1 = max[0] - min[0];
-			const double sx2 = maxX2 - minX2;
+			const double sx2 = env.liveData.max[0] - env.liveData.min[0];
 			//const double dsx = std::abs(sx2 - sx1);
 			const double dsx = std::abs(0.0 - sx1) * env.xFactor;
 			
-			totalDistance += dsx * dsx * numPoints;
+			totalDistance += std::sqrt(dsx * dsx) * numPoints;
 		}
 		
 		totalDistance += 1.0;
@@ -190,6 +184,8 @@ void Dancer::randomizeSpringFactors()
 		//s.springFactor = random(100.0, 10000.0);
 		//s.springFactor = random(100000.0, 100000.0);
 	}
+	
+	accelTowardsOtherDancer = 100.0;
 }
 
 void Dancer::constructFromPoints(const float * points, const int numPoints)
@@ -315,6 +311,7 @@ void Dancer::finalize()
 		const double ds = std::hypot(dx, dy);
 		
 		s.desiredDistance = ds;
+		s.maximumDistance = ds * env.maxDistanceFactor;
 	}
 }
 
@@ -388,6 +385,23 @@ void Dancer::tick(const double dt, const int fitnessFunction)
 			}
 		}
     #endif
+	
+	#if 0
+		{
+			// apply acceleration towards dancer
+			
+			const double centerX = (min[0] + max[0]) / 2.0;
+			const double dancerCenterX = (env.liveData.min[0] + env.liveData.max[0]) / 2.0;
+			const double dx = dancerCenterX - centerX;
+			
+			for (int i = 0; i < numJoints; ++i)
+			{
+				DancerJoint & j = joints[i];
+				
+				j.x += dx;
+			}
+		}
+	#endif
 		
 		for (int j = 0; j < numJoints; ++j)
 		{
