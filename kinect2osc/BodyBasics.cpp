@@ -12,12 +12,14 @@
 #include "ip/UdpSocket.h"
 #include "osc/OscOutboundPacketStream.h"
 #include "osc/OscPacketListener.h"
+#include <string>
 
 #define OSC_BUFFER_SIZE 1000
-#define OSC_DEST_ADDRESS "10.10.150.153"
+static std::string OSC_DEST_ADDRESS_1 = "10.10.150.153";
+static std::string OSC_DEST_ADDRESS_2 = "10.10.150.148";
 #define OSC_DEST_PORT 7000
 
-UdpTransmitSocket * transmitSocket = 0;
+static UdpTransmitSocket * transmitSocket = 0;
 
 static void SendJointPoints(D2D1_POINT_2F * joints, int numJoints)
 {
@@ -40,7 +42,10 @@ static void SendJointPoints(D2D1_POINT_2F * joints, int numJoints)
 		<< osc::EndMessage
 		<< osc::EndBundle;
 
-	transmitSocket->Send(p.Data(), p.Size());
+	IpEndpointName ip1(OSC_DEST_ADDRESS_1.c_str(), OSC_DEST_PORT);
+	IpEndpointName ip2(OSC_DEST_ADDRESS_2.c_str(), OSC_DEST_PORT);
+	transmitSocket->SendTo(ip1, p.Data(), p.Size());
+	transmitSocket->SendTo(ip2, p.Data(), p.Size());
 }
 
 static const float c_JointThickness = 3.0f;
@@ -66,8 +71,17 @@ int APIENTRY wWinMain(
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-	transmitSocket = new UdpTransmitSocket(IpEndpointName(OSC_DEST_ADDRESS, OSC_DEST_PORT));
-	//transmitSocket->SetEnableBroadcast(true);
+	char env[256];
+
+	if (GetEnvironmentVariableA("ip1", env, 256) > 0)
+		OSC_DEST_ADDRESS_1 = env;
+	if (GetEnvironmentVariableA("ip2", env, 256) > 0)
+		OSC_DEST_ADDRESS_2 = env;
+
+	printf("ip1 = %s\n", OSC_DEST_ADDRESS_1.c_str());
+	printf("ip2 = %s\n", OSC_DEST_ADDRESS_2.c_str());
+
+	transmitSocket = new UdpTransmitSocket(IpEndpointName(OSC_DEST_ADDRESS_1.c_str(), OSC_DEST_PORT));
 
     CBodyBasics application;
     application.Run(hInstance, nShowCmd);
