@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "vfxNodes/vfxNodeBase.h"
+#include "cclDancer.h"
 
 class Surface;
 
@@ -146,6 +147,8 @@ bool provideMotionData_Kinect(const float time, MotionFrame & frame);
 
 struct VfxNodeCCL : VfxNodeBase
 {
+	const static int kNumDancers = 8;
+	
 	enum Imnput
 	{
 		kInput_Filename,
@@ -159,6 +162,18 @@ struct VfxNodeCCL : VfxNodeBase
 		kInput_OscTrigger,
 		kInput_OscValues,
 		kInput_OscScale,
+		kInput_ShowGeneticDancers,
+		kInput_VisualDancerBlendPerSecond,
+        kInput_FitnessFunction,
+		kInput_BodyConnectivity,
+		kInput_BodyDistance,
+		kInput_EnvGravity,
+		kInput_EnvFactorX,
+		kInput_EnvFactorY,
+		kInput_EnvUseSpasms,
+		kInput_EnvUseSprings,
+		kInput_EnvUseDistanceConstraint,
+		kInput_ShowMotionData,
 		kInput_COUNT
 	};
 	
@@ -177,6 +192,15 @@ struct VfxNodeCCL : VfxNodeBase
 	MotionFrame oscFrame;
 	
 	Mat4x4 frameTransform;
+	
+	Dancer currentDancer;
+	Dancer currentDancerSlow;
+	Dancer fittestDancer;
+	Dancer dancer[kNumDancers];
+	double timeToNextGeneration;
+	double timeToNextFitnessFunction;
+	FitnessFunction currentFitnessFunction;
+	
 	//
 	
 	std::string filename;
@@ -192,6 +216,10 @@ struct VfxNodeCCL : VfxNodeBase
 	virtual void draw() const override;
 	
 	void analyzeFrame(MotionFrame & frame, MotionFrameAnalysis & analysis);
+	
+	void calculateNextGeneration();
+	Dancer breed(const Dancer & o, const Dancer & d1, const Dancer & d2);
+	void mutate(Dancer & d);
 	
 	virtual void handleTrigger(int socketIndex) override;
 };
